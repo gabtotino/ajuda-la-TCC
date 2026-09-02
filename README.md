@@ -155,23 +155,4 @@ ajuda-la/
 └── migrations/                # Histórico de migrations (Flask-Migrate)
 ```
 
-## Roteiro de demonstração (vídeo)
 
-1. **Landing:** mostrar a home com o hero, "como funciona" e as tarefas em
-   destaque puxadas direto do banco.
-2. **Cadastro:** criar uma conta nova escolhendo o papel de contratante.
-3. **Publicar tarefa com IA:** ir em "Publicar uma tarefa", digitar uma
-   frase livre no assistente (ex.: *"preciso de ajuda pra pintar o muro da
-   garagem, uns 150 reais"*) e mostrar os campos sendo preenchidos
-   automaticamente antes de publicar.
-4. **Candidatura:** logar como `joao@example.com`, abrir a tarefa recém
-   publicada e se candidatar.
-5. **Aceite:** logar de volta como o contratante, ver o candidato na página
-   da tarefa e aceitar — mostrar o status mudando para "em andamento".
-6. **Conclusão:** marcar a tarefa como concluída.
-7. **Dashboard:** mostrar o painel do contratante (tarefas por status) e do
-   prestador (`carla@example.com`, que tem os dois papéis, é um bom exemplo
-   para mostrar as abas do painel).
-8. **Perfil:** editar o perfil, alternando os papéis de contratante/prestador.
-9. **Fechamento:** mencionar o roadmap futuro (upload de imagens, avaliações,
-   chat) como próximos passos planejados.
