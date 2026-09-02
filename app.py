@@ -58,8 +58,10 @@ def create_app():
 
     # Blueprints: cada um agrupa as rotas de um assunto (ver routes/).
     from routes.auth import auth_bp
+    from routes.profile import profile_bp
 
     app.register_blueprint(auth_bp, url_prefix="/auth")
+    app.register_blueprint(profile_bp, url_prefix="/perfil")
 
     @app.route("/")
     def home():

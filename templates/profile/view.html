@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+
+{% block title %}{{ profile_user.name }} — Ajuda-Lá{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="profile-card">
+        <div class="profile-avatar">{{ profile_user.name[0]|upper }}</div>
+        <h2>{{ profile_user.name }}</h2>
+
+        <div class="profile-roles">
+            {% if profile_user.is_contractor %}
+                <span class="role-badge">Contratante</span>
+            {% endif %}
+            {% if profile_user.is_provider %}
+                <span class="role-badge">Prestador</span>
+            {% endif %}
+        </div>
+
+        {% if profile_user.id == current_user.id %}
+            <a href="{{ url_for('profile.edit_profile') }}" class="btn btn-outline-primary">Editar perfil</a>
+        {% endif %}
+
+        <dl class="profile-info">
+            <dt>Cidade</dt>
+            <dd>{{ profile_user.city or "Não informada" }}</dd>
+
+            <dt>Sobre</dt>
+            <dd>{{ profile_user.bio or "Este usuário ainda não escreveu uma bio." }}</dd>
+
+            {% if profile_user.is_provider %}
+                <dt>Avaliação como prestador</dt>
+                <dd class="profile-rating">
+                    {% if profile_user.avg_rating %}
+                        {{ "%.1f"|format(profile_user.avg_rating) }} / 5
+                    {% else %}
+                        Ainda sem avaliações
+                    {% endif %}
+                </dd>
+            {% endif %}
+        </dl>
+    </div>
+</div>
+{% endblock %}

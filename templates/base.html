@@ -17,19 +17,16 @@
     <!-- Header comum a todas as páginas -->
     <header class="main-header">
         <div class="container header-content">
-            <!-- O arquivo original logo.png da Fase 4 não estava disponível no
-                 repositório; logo.svg foi recriado na Etapa 2 seguindo a
-                 mesma paleta em gradiente. -->
-            <img src="{{ url_for('static', filename='img/logo.svg') }}" alt="Ajuda-Lá" class="logo">
+            <img src="{{ url_for('static', filename='img/logo.png') }}" alt="Ajuda-Lá" class="logo">
             <h1>Ajuda-Lá</h1>
-            <p class="tagline">Conectando quem precisa a quem pode ajudar</p>
+            <p class="tagline">Conectando pessoas para resolver tarefas do dia a dia</p>
 
             <!-- Menu dinâmico: current_user vem do Flask-Login (injetado
                  automaticamente no contexto do Jinja2 depois de
                  login_manager.init_app(app) em app.py). -->
             <nav class="main-nav">
                 {% if current_user.is_authenticated %}
-                    <span>Olá, {{ current_user.name }}</span>
+                    <a href="{{ url_for('profile.view_profile', user_id=current_user.id) }}">Olá, {{ current_user.name }}</a>
                     <a href="{{ url_for('auth.logout') }}">Sair</a>
                 {% else %}
                     <a href="{{ url_for('auth.login') }}">Entrar</a>
