@@ -28,3 +28,35 @@ def generate_csrf_token():
 def validate_csrf_token(submitted_token):
     """Confere se o token enviado no formulário bate com o da sessão."""
     return submitted_token is not None and submitted_token == session.get("csrf_token")
+
+
+# Ícone exibido nos cards de tarefa conforme a categoria. Mantido separado
+# do model porque é puramente apresentação (não faz sentido morar no banco).
+CATEGORY_ICONS = {
+    "Lavagem de veículo": "🚗",
+    "Limpeza de quintal": "🌿",
+    "Mudança": "📦",
+    "Montagem de móveis": "🪑",
+    "Passeio com pet": "🐕",
+    "Pintura": "🎨",
+    "Reparos domésticos": "🔧",
+    "Limpeza doméstica": "🧹",
+    "Aulas particulares": "📚",
+    "Outros": "🧰",
+}
+
+
+def category_icon(category):
+    """Registrada como filtro Jinja2: {{ task.category|category_icon }}."""
+    return CATEGORY_ICONS.get(category, "🧰")
+
+
+def format_brl(value):
+    """Formata um número como moeda brasileira: 1234.5 -> '1.234,50'."""
+    try:
+        value = float(value)
+    except (TypeError, ValueError):
+        return value
+    integer_part, decimal_part = f"{value:,.2f}".split(".")
+    integer_part = integer_part.replace(",", ".")
+    return f"{integer_part},{decimal_part}"

@@ -52,20 +52,52 @@ def create_app():
 
     # Registra o token CSRF (utils.py) como função global do Jinja2, para
     # que qualquer template possa chamar {{ csrf_token() }} sem import.
-    from utils import generate_csrf_token
+    from utils import category_icon, format_brl, generate_csrf_token
 
     app.jinja_env.globals["csrf_token"] = generate_csrf_token
+    app.jinja_env.filters["category_icon"] = category_icon
+    app.jinja_env.filters["brl"] = format_brl
 
     # Blueprints: cada um agrupa as rotas de um assunto (ver routes/).
     from routes.auth import auth_bp
     from routes.profile import profile_bp
+    from routes.tasks import tasks_bp
+    from routes.applications import applications_bp
+    from routes.dashboard import dashboard_bp
+    from routes.ai import ai_bp
 
     app.register_blueprint(auth_bp, url_prefix="/auth")
     app.register_blueprint(profile_bp, url_prefix="/perfil")
+    app.register_blueprint(tasks_bp, url_prefix="/tarefas")
+    app.register_blueprint(applications_bp, url_prefix="/candidaturas")
+    app.register_blueprint(dashboard_bp, url_prefix="/painel")
+    app.register_blueprint(ai_bp, url_prefix="/ai")
 
     @app.route("/")
     def home():
-        return render_template("index.html")
+        # As 6 tarefas abertas mais recentes aparecem na home como destaque;
+        # a listagem completa (com busca e filtro) fica em /tarefas.
+        featured_tasks = (
+            Task.query.filter_by(status=Task.STATUS_OPEN)
+            .order_by(Task.created_at.desc())
+            .limit(6)
+            .all()
+        )
+        return render_template("index.html", featured_tasks=featured_tasks)
+
+    # Páginas de erro customizadas (Etapa 12), mantendo a mesma identidade
+    # visual do resto do site em vez da página padrão feia do Flask/Werkzeug.
+    @app.errorhandler(404)
+    def not_found(error):
+        return render_template("errors/404.html"), 404
+
+    @app.errorhandler(500)
+    def server_error(error):
+        # Uma exceção não tratada pode deixar a sessão do SQLAlchemy em um
+        # estado inconsistente; sem o rollback, o próximo request nesse
+        # mesmo worker herdaria uma transação quebrada.
+        db.session.rollback()
+        return render_template("errors/500.html"), 500
 
     return app
 

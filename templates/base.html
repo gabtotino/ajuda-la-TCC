@@ -14,23 +14,23 @@
 </head>
 <body>
 
-    <!-- Header comum a todas as páginas -->
-    <header class="main-header">
-        <div class="container header-content">
-            <img src="{{ url_for('static', filename='img/logo.png') }}" alt="Ajuda-Lá" class="logo">
-            <h1>Ajuda-Lá</h1>
-            <p class="tagline">Conectando pessoas para resolver tarefas do dia a dia</p>
+    <!-- Header compacto e fixo no topo (sticky), com marca à esquerda e
+         menu dinâmico à direita. current_user vem do Flask-Login. -->
+    <header class="site-header">
+        <div class="container">
+            <a href="{{ url_for('home') }}" class="brand">
+                <img src="{{ url_for('static', filename='img/logo.png') }}" alt="Ajuda-Lá" class="logo">
+                <span class="brand-name">Ajuda-Lá</span>
+            </a>
 
-            <!-- Menu dinâmico: current_user vem do Flask-Login (injetado
-                 automaticamente no contexto do Jinja2 depois de
-                 login_manager.init_app(app) em app.py). -->
             <nav class="main-nav">
                 {% if current_user.is_authenticated %}
-                    <a href="{{ url_for('profile.view_profile', user_id=current_user.id) }}">Olá, {{ current_user.name }}</a>
+                    <a href="{{ url_for('dashboard.home') }}">Painel</a>
+                    <a href="{{ url_for('profile.view_profile', user_id=current_user.id) }}">Olá, {{ current_user.name.split(' ')[0] }}</a>
                     <a href="{{ url_for('auth.logout') }}">Sair</a>
                 {% else %}
                     <a href="{{ url_for('auth.login') }}">Entrar</a>
-                    <a href="{{ url_for('auth.register') }}" class="btn btn-primary">Cadastrar</a>
+                    <a href="{{ url_for('auth.register') }}" class="btn btn-primary btn-sm">Cadastrar</a>
                 {% endif %}
             </nav>
         </div>
@@ -54,7 +54,7 @@
     </main>
 
     <!-- Footer comum -->
-    <footer class="main-footer">
+    <footer class="site-footer">
         <div class="container">
             <p>&copy; 2026 Ajuda-Lá — Projeto Acadêmico FIAP</p>
         </div>

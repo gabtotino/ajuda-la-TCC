@@ -20,6 +20,22 @@ class Task(db.Model):
     STATUS_CANCELED = "cancelada"
     STATUSES = (STATUS_OPEN, STATUS_IN_PROGRESS, STATUS_DONE, STATUS_CANCELED)
 
+    # Categorias fixas (em vez de texto livre) para que o filtro da
+    # listagem e o assistente de IA (Etapa 11) sempre trabalhem com o
+    # mesmo vocabulário.
+    CATEGORIES = (
+        "Lavagem de veículo",
+        "Limpeza de quintal",
+        "Mudança",
+        "Montagem de móveis",
+        "Passeio com pet",
+        "Pintura",
+        "Reparos domésticos",
+        "Limpeza doméstica",
+        "Aulas particulares",
+        "Outros",
+    )
+
     id = db.Column(db.Integer, primary_key=True)
     title = db.Column(db.String(150), nullable=False)
     description = db.Column(db.Text, nullable=False)

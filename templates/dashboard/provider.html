@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+
+{% block title %}Painel do prestador — Ajuda-Lá{% endblock %}
+
+{% block content %}
+<div class="container page-top">
+    <div class="section-header section-header-left">
+        <span class="section-eyebrow">Seu painel</span>
+        <h2>Painel do prestador</h2>
+    </div>
+
+    {% if show_contractor_tab %}
+        <div class="tabs">
+            <a href="{{ url_for('dashboard.contractor') }}" class="tab-link">Contratante</a>
+            <a href="{{ url_for('dashboard.provider') }}" class="tab-link active">Prestador</a>
+        </div>
+    {% endif %}
+
+    <div class="stat-grid">
+        <div class="stat-card">
+            <div class="stat-value">{{ stats.enviadas }}</div>
+            <div class="stat-label">Candidaturas enviadas</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-value">{{ stats.aceitas }}</div>
+            <div class="stat-label">Aceitas</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-value">{{ stats.concluidas }}</div>
+            <div class="stat-label">Concluídas</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-value">
+                {% if stats.avaliacao_media %}{{ "%.1f"|format(stats.avaliacao_media) }}{% else %}—{% endif %}
+            </div>
+            <div class="stat-label">Avaliação média</div>
+        </div>
+    </div>
+
+    <h3>Minhas candidaturas</h3>
+    {% if applications %}
+        {% for application in applications %}
+            <div class="list-card">
+                <div>
+                    <div class="list-card-title">{{ application.task.title }}</div>
+                    <div class="list-card-meta">{{ application.task.category }} · R$ {{ application.task.value|brl }}</div>
+                </div>
+                <div class="list-card-actions">
+                    <span class="task-status task-status-{{ application.status }}">{{ application.status }}</span>
+                    <a href="{{ url_for('tasks.detail', task_id=application.task_id) }}" class="btn btn-outline-primary btn-sm">Ver tarefa</a>
+                </div>
+            </div>
+        {% endfor %}
+    {% else %}
+        <div class="empty-state">
+            <p>Você ainda não se candidatou a nenhuma tarefa. <a href="{{ url_for('tasks.list_tasks') }}">Ver tarefas disponíveis</a>.</p>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}

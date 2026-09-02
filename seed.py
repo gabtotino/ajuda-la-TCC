@@ -1,5 +1,5 @@
 # seed.py
-"""Script opcional para popular o banco com dados de teste/demonstração.
+"""Script para popular o banco com dados de demonstração (apresentação/vídeo).
 
 Rode com:
     python seed.py
@@ -19,45 +19,94 @@ with app.app_context():
     db.drop_all()
     db.create_all()
 
-    contractor = User(
+    mariana = User(
         name="Mariana Souza",
         email="mariana@example.com",
         is_contractor=True,
-        city="São Paulo",
+        city="São Paulo, SP",
+        bio="Moro na Vila Mariana e sempre preciso de uma força com tarefas de casa.",
     )
-    contractor.set_password("senha123")
+    mariana.set_password("senha123")
 
-    provider = User(
+    joao = User(
         name="João Pereira",
         email="joao@example.com",
         is_provider=True,
-        city="São Paulo",
-        bio="Faço serviços domésticos com pontualidade e capricho.",
+        city="São Paulo, SP",
+        bio="Faço serviços domésticos com pontualidade e capricho. Disponível fins de semana.",
     )
-    provider.set_password("senha123")
+    joao.set_password("senha123")
 
-    db.session.add_all([contractor, provider])
-    # Commit aqui é necessário para que contractor.id e provider.id sejam
-    # gerados pelo banco antes de usá-los como foreign key abaixo.
+    # Usuário com os dois papéis, para demonstrar o painel com abas.
+    carla = User(
+        name="Carla Nunes",
+        email="carla@example.com",
+        is_contractor=True,
+        is_provider=True,
+        city="Osasco, SP",
+        bio="Às vezes contrato ajuda, às vezes ofereço — moro perto e gosto de ajudar a vizinhança.",
+        avg_rating=4.5,
+    )
+    carla.set_password("senha123")
+
+    db.session.add_all([mariana, joao, carla])
+    # Commit aqui é necessário para que os ids existam antes de usá-los
+    # como foreign key nas tarefas abaixo.
     db.session.commit()
 
-    task = Task(
+    task_open_1 = Task(
         title="Lavar carro no sábado",
         description="Preciso lavar meu carro (hatch) na garagem de casa, sábado de manhã.",
         category="Lavagem de veículo",
         location="Vila Mariana, São Paulo",
         value=50.00,
         status=Task.STATUS_OPEN,
-        contractor_id=contractor.id,
+        contractor_id=mariana.id,
     )
-    db.session.add(task)
+    task_open_2 = Task(
+        title="Cortar grama e organizar quintal",
+        description="Quintal pequeno, grama alta e alguns galhos para recolher.",
+        category="Limpeza de quintal",
+        location="Pinheiros, São Paulo",
+        value=80.00,
+        status=Task.STATUS_OPEN,
+        contractor_id=carla.id,
+    )
+    task_in_progress = Task(
+        title="Montar guarda-roupa novo",
+        description="Guarda-roupa de 3 portas comprado desmontado, já tenho as ferramentas.",
+        category="Montagem de móveis",
+        location="Osasco, São Paulo",
+        value=90.00,
+        status=Task.STATUS_IN_PROGRESS,
+        contractor_id=carla.id,
+        accepted_provider_id=joao.id,
+    )
+    task_done = Task(
+        title="Passear com cachorro à tarde",
+        description="Passeio de 30 minutos com meu cachorro, todo dia às 17h durante a semana.",
+        category="Passeio com pet",
+        location="Vila Mariana, São Paulo",
+        value=35.00,
+        status=Task.STATUS_DONE,
+        contractor_id=mariana.id,
+        accepted_provider_id=joao.id,
+    )
+    db.session.add_all([task_open_1, task_open_2, task_in_progress, task_done])
     db.session.commit()
 
-    application = Application(task_id=task.id, provider_id=provider.id)
-    db.session.add(application)
+    # João já se candidatou à primeira tarefa aberta da Mariana, e foi
+    # aceito nas outras duas (uma em andamento, uma concluída) — dá pra
+    # mostrar os três estados de uma candidatura na demonstração.
+    applications = [
+        Application(task_id=task_open_1.id, provider_id=joao.id, status=Application.STATUS_PENDING),
+        Application(task_id=task_in_progress.id, provider_id=joao.id, status=Application.STATUS_ACCEPTED),
+        Application(task_id=task_done.id, provider_id=joao.id, status=Application.STATUS_ACCEPTED),
+    ]
+    db.session.add_all(applications)
     db.session.commit()
 
-    print("Seed concluído:")
-    print(f"  Contratante: {contractor.email} / senha123")
-    print(f"  Prestador:   {provider.email} / senha123")
-    print(f"  Tarefa criada: {task.title!r} (id={task.id})")
+    print("Seed concluído. Contas de demonstração (senha 'senha123' para todas):")
+    print(f"  Contratante:            {mariana.email}")
+    print(f"  Prestador:              {joao.email}")
+    print(f"  Contratante + Prestador: {carla.email}")

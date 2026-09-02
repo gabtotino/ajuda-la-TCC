@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+
+{% block title %}Publicar tarefa — Ajuda-Lá{% endblock %}
+
+{% block content %}
+<div class="container page-top">
+    <div class="form-wrapper">
+        <div class="form-card">
+            <h2>Publicar uma tarefa</h2>
+            <p class="form-card-subtitle">Descreva o que você precisa e receba candidaturas de prestadores.</p>
+
+            <!-- Assistente de IA (Etapa 11): interpreta um texto livre e
+                 pré-preenche os campos abaixo. Se a chamada falhar, o
+                 usuário preenche o formulário normalmente. -->
+            <div class="ai-box">
+                <label for="ai-assist-text"><strong>Descreva em poucas palavras (opcional)</strong></label>
+                <textarea id="ai-assist-text" rows="2" placeholder='Ex.: "preciso lavar meu carro no sábado, pago 50 reais"'></textarea>
+                <button type="button" id="ai-assist-button" class="btn btn-outline-primary btn-sm">✨ Interpretar com IA</button>
+                <p class="ai-status" id="ai-assist-status"></p>
+            </div>
+
+            <form method="POST" action="{{ url_for('tasks.create') }}" novalidate>
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+                <div class="form-group">
+                    <label for="title">Título</label>
+                    <input type="text" id="title" name="title" value="{{ title or '' }}" placeholder="Ex.: Lavar carro no sábado" required>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="category">Categoria</label>
+                        <select id="category" name="category" required>
+                            <option value="" disabled {% if not category %}selected{% endif %}>Selecione...</option>
+                            {% for cat in categories %}
+                                <option value="{{ cat }}" {% if cat == category %}selected{% endif %}>{{ cat }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="value">Valor (R$)</label>
+                        <input type="text" id="value" name="value" value="{{ value or '' }}" placeholder="Ex.: 50,00" required>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="location">Localização</label>
+                    <input type="text" id="location" name="location" value="{{ location or '' }}" placeholder="Ex.: Vila Mariana, São Paulo" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="description">Descrição</label>
+                    <textarea id="description" name="description" rows="5" placeholder="Dê detalhes sobre a tarefa...">{{ description or '' }}</textarea>
+                </div>
+
+                <button type="submit" class="btn btn-primary btn-block">Publicar tarefa</button>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/ai-assistant.js') }}"></script>
+{% endblock %}

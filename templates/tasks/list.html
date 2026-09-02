@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% from "tasks/_card.html" import task_card %}
+
+{% block title %}Tarefas disponíveis — Ajuda-Lá{% endblock %}
+
+{% block content %}
+<div class="container page-top">
+    <div class="section-header">
+        <span class="section-eyebrow">Marketplace</span>
+        <h2>Tarefas disponíveis</h2>
+        <p>Busque por palavra-chave ou filtre por categoria.</p>
+    </div>
+
+    <!-- Busca e filtro via GET: a URL fica compartilhável e o botão
+         "voltar" do navegador funciona corretamente. -->
+    <form method="GET" action="{{ url_for('tasks.list_tasks') }}" class="filter-bar">
+        <input type="text" name="q" placeholder="Buscar por título ou descrição..." value="{{ query }}">
+        <select name="categoria">
+            <option value="">Todas as categorias</option>
+            {% for cat in categories %}
+                <option value="{{ cat }}" {% if cat == category %}selected{% endif %}>{{ cat }}</option>
+            {% endfor %}
+        </select>
+        <button type="submit" class="btn btn-primary btn-sm">Filtrar</button>
+        {% if query or category %}
+            <a href="{{ url_for('tasks.list_tasks') }}" class="btn btn-ghost btn-sm">Limpar</a>
+        {% endif %}
+    </form>
+
+    {% if tasks %}
+        <div class="task-grid">
+            {% for task in tasks %}
+                {{ task_card(task) }}
+            {% endfor %}
+        </div>
+    {% else %}
+        <div class="empty-state">
+            <p>Nenhuma tarefa encontrada com esses filtros.</p>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}

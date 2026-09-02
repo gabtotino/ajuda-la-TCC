@@ -1,0 +1,21 @@
+{# Macro reutilizada na home e na listagem de tarefas — um único lugar
+   define a aparência do card, então mudar o design não exige editar as
+   duas páginas separadamente. #}
+{% macro task_card(task) %}
+<article class="task-card">
+    <div class="task-card-top">
+        <div class="task-icon-tile">{{ task.category|category_icon }}</div>
+        {% if task.status != "aberta" %}
+            <span class="task-status task-status-{{ task.status }}">{{ task.status.replace('_', ' ') }}</span>
+        {% else %}
+            <span class="task-category">{{ task.category }}</span>
+        {% endif %}
+    </div>
+    <h3><a href="{{ url_for('tasks.detail', task_id=task.id) }}">{{ task.title }}</a></h3>
+    <p class="task-location">📍 {{ task.location }}</p>
+    <div class="task-footer">
+        <span class="task-price"><small>Valor</small>R$ {{ task.value|brl }}</span>
+        <a href="{{ url_for('tasks.detail', task_id=task.id) }}" class="task-link-btn" aria-label="Ver detalhes de {{ task.title }}">→</a>
+    </div>
+</article>
+{% endmacro %}
