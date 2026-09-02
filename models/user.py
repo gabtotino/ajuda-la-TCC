@@ -11,12 +11,16 @@ simples para o escopo do MVP.
 
 from datetime import datetime
 
+from flask_login import UserMixin
 from werkzeug.security import check_password_hash, generate_password_hash
 
 from extensions import db
 
 
-class User(db.Model):
+class User(UserMixin, db.Model):
+    # UserMixin (Flask-Login) implementa is_authenticated, is_active,
+    # is_anonymous e get_id() a partir da coluna "id" abaixo, sem precisar
+    # reescrever esses métodos manualmente.
     __tablename__ = "users"
 
     id = db.Column(db.Integer, primary_key=True)

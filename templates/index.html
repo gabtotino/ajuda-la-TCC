@@ -1,0 +1,139 @@
+{% extends "base.html" %}
+
+{% block title %}Ajuda-Lá — Encontre ajuda para tarefas do dia a dia{% endblock %}
+
+{% block content %}
+<!-- Seção de destaque com o resumo da proposta do produto -->
+<section class="hero">
+    <div class="container">
+        <h2>Precisa de uma mãozinha? A gente conecta você a quem pode ajudar.</h2>
+        <p>
+            Lave o carro, arrume o quintal, monte aquele móvel ou peça uma ajuda na
+            mudança. Publique a tarefa, receba candidaturas de prestadores da sua
+            região e escolha quem vai te ajudar.
+        </p>
+        <div class="hero-actions">
+            <!-- Aponta para o cadastro por enquanto; passa a levar direto
+                 para a criação de tarefa quando o blueprint tasks existir
+                 (Etapa 5). -->
+            <a href="{{ url_for('auth.register') }}" class="btn btn-primary">Publicar uma tarefa</a>
+            <a href="{{ url_for('auth.register') }}" class="btn btn-outline">Quero prestar serviços</a>
+        </div>
+    </div>
+</section>
+
+<!-- Explicação rápida do fluxo, em 3 passos -->
+<section class="how-it-works">
+    <div class="container">
+        <h2>Como funciona</h2>
+        <div class="steps-grid">
+            <div class="step-card">
+                <div class="step-icon">📝</div>
+                <h3>1. Publique a tarefa</h3>
+                <p>Descreva o que precisa, onde e quanto está disposto a pagar.</p>
+            </div>
+            <div class="step-card">
+                <div class="step-icon">🙋</div>
+                <h3>2. Receba candidaturas</h3>
+                <p>Prestadores da sua região se candidatam para te ajudar.</p>
+            </div>
+            <div class="step-card">
+                <div class="step-icon">✅</div>
+                <h3>3. Escolha e avalie</h3>
+                <p>Aceite o candidato ideal e avalie o serviço ao final.</p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!--
+    Cards de tarefas ainda hardcoded nesta etapa — mantendo a mesma
+    abordagem estática da Fase 4. A partir da Etapa 5 este bloco passa a
+    ser gerado dinamicamente com um loop Jinja2 sobre as tarefas reais
+    cadastradas no banco.
+-->
+<section class="tasks-section">
+    <div class="container">
+        <h2>Tarefas em destaque</h2>
+        <div class="task-grid">
+            <article class="task-card">
+                <div class="task-card-image">🚗</div>
+                <div class="task-card-body">
+                    <span class="task-category">Lavagem de veículo</span>
+                    <h3>Lavar carro no sábado</h3>
+                    <p class="task-location">Vila Mariana, São Paulo</p>
+                    <div class="task-footer">
+                        <span class="task-price">R$ 50,00</span>
+                        <a href="#" class="task-link">Ver detalhes →</a>
+                    </div>
+                </div>
+            </article>
+
+            <article class="task-card">
+                <div class="task-card-image">🌿</div>
+                <div class="task-card-body">
+                    <span class="task-category">Limpeza de quintal</span>
+                    <h3>Cortar grama e organizar quintal</h3>
+                    <p class="task-location">Pinheiros, São Paulo</p>
+                    <div class="task-footer">
+                        <span class="task-price">R$ 80,00</span>
+                        <a href="#" class="task-link">Ver detalhes →</a>
+                    </div>
+                </div>
+            </article>
+
+            <article class="task-card">
+                <div class="task-card-image">📦</div>
+                <div class="task-card-body">
+                    <span class="task-category">Mudança</span>
+                    <h3>Ajuda para carregar caixas na mudança</h3>
+                    <p class="task-location">Moema, São Paulo</p>
+                    <div class="task-footer">
+                        <span class="task-price">R$ 120,00</span>
+                        <a href="#" class="task-link">Ver detalhes →</a>
+                    </div>
+                </div>
+            </article>
+
+            <article class="task-card">
+                <div class="task-card-image">🪑</div>
+                <div class="task-card-body">
+                    <span class="task-category">Montagem de móveis</span>
+                    <h3>Montar guarda-roupa novo</h3>
+                    <p class="task-location">Santana, São Paulo</p>
+                    <div class="task-footer">
+                        <span class="task-price">R$ 90,00</span>
+                        <a href="#" class="task-link">Ver detalhes →</a>
+                    </div>
+                </div>
+            </article>
+
+            <article class="task-card">
+                <div class="task-card-image">🐕</div>
+                <div class="task-card-body">
+                    <span class="task-category">Passeio com pet</span>
+                    <h3>Passear com cachorro à tarde</h3>
+                    <p class="task-location">Tatuapé, São Paulo</p>
+                    <div class="task-footer">
+                        <span class="task-price">R$ 35,00</span>
+                        <a href="#" class="task-link">Ver detalhes →</a>
+                    </div>
+                </div>
+            </article>
+
+            <article class="task-card">
+                <div class="task-card-image">🎨</div>
+                <div class="task-card-body">
+                    <span class="task-category">Pintura</span>
+                    <h3>Pintar muro pequeno da garagem</h3>
+                    <p class="task-location">Ipiranga, São Paulo</p>
+                    <div class="task-footer">
+                        <span class="task-price">R$ 150,00</span>
+                        <a href="#" class="task-link">Ver detalhes →</a>
+                    </div>
+                </div>
+            </article>
+        </div>
+    </div>
+</section>
+{% endblock %}

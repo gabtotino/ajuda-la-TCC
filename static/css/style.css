@@ -1,0 +1,428 @@
+/* static/css/style.css
+   Estilo base do Ajuda-Lá: fonte Poppins, paleta em gradiente
+   (violeta -> ciano) e layout em cards, conforme a identidade visual
+   definida na Fase 4. Reconstruído nesta etapa porque os arquivos
+   originais da Fase 4 não estavam disponíveis no projeto.
+*/
+
+:root {
+  --color-primary: #7c3aed;
+  --color-primary-dark: #5b21b6;
+  --color-secondary: #06b6d4;
+  --gradient-main: linear-gradient(135deg, #7c3aed 0%, #06b6d4 100%);
+
+  --color-bg: #f5f3ff;
+  --color-surface: #ffffff;
+  --color-text: #1f2937;
+  --color-text-muted: #6b7280;
+  --color-border: #e5e7eb;
+
+  --color-success: #10b981;
+  --color-warning: #f59e0b;
+  --color-danger: #ef4444;
+
+  --radius: 16px;
+  --radius-sm: 10px;
+  --shadow-card: 0 4px 20px rgba(124, 58, 237, 0.1);
+  --shadow-card-hover: 0 10px 30px rgba(124, 58, 237, 0.18);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: "Poppins", "Segoe UI", sans-serif;
+  background-color: var(--color-bg);
+  color: var(--color-text);
+  line-height: 1.6;
+}
+
+h1, h2, h3, h4 {
+  margin: 0 0 0.5em;
+  font-weight: 600;
+}
+
+p {
+  margin: 0 0 1em;
+}
+
+a {
+  color: var(--color-primary);
+  text-decoration: none;
+}
+
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 24px;
+}
+
+/* --- Header --- */
+.main-header {
+  background: var(--gradient-main);
+  color: #ffffff;
+  padding: 24px 0;
+}
+
+.header-content {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.header-content .logo {
+  width: 48px;
+  height: 48px;
+  flex-shrink: 0;
+}
+
+.header-content h1 {
+  font-size: 1.6rem;
+  margin: 0;
+}
+
+.header-content .tagline {
+  margin: 0;
+  opacity: 0.9;
+  font-size: 0.95rem;
+  flex-basis: 100%;
+}
+
+/* Menu de navegação (login/cadastro ou usuário logado) */
+.main-nav {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.main-nav a,
+.main-nav span {
+  color: #ffffff;
+  font-size: 0.95rem;
+}
+
+.main-nav a:hover {
+  text-decoration: underline;
+}
+
+.main-nav .btn {
+  color: var(--color-primary);
+}
+
+/* --- Botões --- */
+.btn {
+  display: inline-block;
+  padding: 12px 28px;
+  border-radius: var(--radius-sm);
+  font-weight: 600;
+  font-size: 0.95rem;
+  border: none;
+  cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.btn:hover {
+  transform: translateY(-2px);
+}
+
+.btn-primary {
+  background: #ffffff;
+  color: var(--color-primary-dark);
+  box-shadow: var(--shadow-card);
+}
+
+.btn-outline {
+  background: transparent;
+  border: 2px solid #ffffff;
+  color: #ffffff;
+}
+
+.btn-block {
+  display: block;
+  width: 100%;
+  text-align: center;
+}
+
+/* --- Hero --- */
+.hero {
+  padding: 64px 0;
+  text-align: center;
+}
+
+.hero h2 {
+  font-size: 2.2rem;
+  color: var(--color-primary-dark);
+}
+
+.hero p {
+  max-width: 640px;
+  margin: 0 auto 32px;
+  color: var(--color-text-muted);
+  font-size: 1.05rem;
+}
+
+.hero-actions {
+  display: flex;
+  justify-content: center;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.hero-actions .btn-primary {
+  background: var(--gradient-main);
+  color: #ffffff;
+}
+
+.hero-actions .btn-outline {
+  border: 2px solid var(--color-primary);
+  color: var(--color-primary);
+}
+
+/* --- Como funciona --- */
+.how-it-works {
+  padding: 48px 0;
+}
+
+.how-it-works h2 {
+  text-align: center;
+  margin-bottom: 32px;
+}
+
+.steps-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 24px;
+}
+
+.step-card {
+  background: var(--color-surface);
+  border-radius: var(--radius);
+  padding: 28px;
+  text-align: center;
+  box-shadow: var(--shadow-card);
+}
+
+.step-card .step-icon {
+  font-size: 2rem;
+  margin-bottom: 12px;
+}
+
+/* --- Cards de tarefas --- */
+.tasks-section {
+  padding: 48px 0 64px;
+}
+
+.tasks-section h2 {
+  text-align: center;
+  margin-bottom: 32px;
+}
+
+.task-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 24px;
+}
+
+.task-card {
+  background: var(--color-surface);
+  border-radius: var(--radius);
+  overflow: hidden;
+  box-shadow: var(--shadow-card);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  display: flex;
+  flex-direction: column;
+}
+
+.task-card:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--shadow-card-hover);
+}
+
+.task-card-image {
+  height: 120px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 2.5rem;
+  background: var(--gradient-main);
+  color: #ffffff;
+}
+
+.task-card-body {
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  flex: 1;
+}
+
+.task-category {
+  display: inline-block;
+  align-self: flex-start;
+  background: #ede9fe;
+  color: var(--color-primary-dark);
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: 999px;
+}
+
+.task-card h3 {
+  font-size: 1.1rem;
+  margin: 0;
+}
+
+.task-location {
+  color: var(--color-text-muted);
+  font-size: 0.9rem;
+}
+
+.task-footer {
+  margin-top: auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-top: 8px;
+}
+
+.task-price {
+  font-weight: 700;
+  color: var(--color-primary-dark);
+  font-size: 1.05rem;
+}
+
+.task-link {
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+/* --- Formulários (cadastro, login etc.) --- */
+.auth-wrapper {
+  max-width: 420px;
+  margin: 48px auto;
+}
+
+.auth-card {
+  background: var(--color-surface);
+  border-radius: var(--radius);
+  padding: 32px;
+  box-shadow: var(--shadow-card);
+}
+
+.auth-card h2 {
+  text-align: center;
+}
+
+.form-group {
+  margin-bottom: 18px;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 6px;
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+.form-group input[type="text"],
+.form-group input[type="email"],
+.form-group input[type="password"] {
+  width: 100%;
+  padding: 10px 14px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  font-family: inherit;
+  font-size: 0.95rem;
+}
+
+.form-group input:focus {
+  outline: none;
+  border-color: var(--color-primary);
+}
+
+.form-check {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.form-hint {
+  text-align: center;
+  margin-top: 16px;
+  font-size: 0.9rem;
+  color: var(--color-text-muted);
+}
+
+/* --- Flash messages --- */
+.flash-messages {
+  max-width: 640px;
+  margin: 16px auto 0;
+  padding: 0 24px;
+}
+
+.alert {
+  padding: 12px 16px;
+  border-radius: var(--radius-sm);
+  margin-bottom: 12px;
+  font-size: 0.9rem;
+}
+
+.alert-success {
+  background: #d1fae5;
+  color: #065f46;
+}
+
+.alert-error,
+.alert-danger {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.alert-info {
+  background: #dbeafe;
+  color: #1e40af;
+}
+
+/* --- Footer --- */
+.main-footer {
+  background: #1f2937;
+  color: #d1d5db;
+  padding: 24px 0;
+  text-align: center;
+  font-size: 0.85rem;
+}
+
+/* --- Responsividade --- */
+@media (max-width: 768px) {
+  .steps-grid,
+  .task-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .hero h2 {
+    font-size: 1.7rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .steps-grid,
+  .task-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .header-content {
+    text-align: center;
+    justify-content: center;
+  }
+
+  .main-nav {
+    margin-left: 0;
+    width: 100%;
+    justify-content: center;
+  }
+}

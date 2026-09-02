@@ -4,7 +4,7 @@
 from flask import Flask, render_template
 
 from config import Config
-from extensions import db, migrate
+from extensions import db, login_manager, migrate
 
 
 def create_app():
@@ -25,6 +25,14 @@ def create_app():
     # serem inicializadas aqui.
     db.init_app(app)
     migrate.init_app(app, db)
+    login_manager.init_app(app)
+
+    # Rota para onde o Flask-Login redireciona quando um usuário anônimo
+    # tenta acessar uma página marcada com @login_required (usado a partir
+    # da Etapa 4, em rotas de perfil/dashboard).
+    login_manager.login_view = "auth.login"
+    login_manager.login_message = "Faça login para continuar."
+    login_manager.login_message_category = "info"
 
     # Importa os models dentro da factory (não no topo do arquivo) para
     # que o Flask-Migrate só tente carregá-los depois que db.init_app já
@@ -32,6 +40,26 @@ def create_app():
     # registrar as classes User/Task/Application/Message/Review no
     # metadata do SQLAlchemy, que é o que "flask db migrate" inspeciona.
     from models import Application, Message, Review, Task, User  # noqa: F401
+
+    @login_manager.user_loader
+    def load_user(user_id):
+        # Flask-Login chama esta função em toda request autenticada,
+        # passando o valor salvo na sessão (get_id(), via UserMixin) para
+        # recarregar o objeto User completo a partir do banco.
+        # db.session.get() é a forma recomendada no SQLAlchemy 2.0 para
+        # buscar por chave primária (Query.get() está depreciado).
+        return db.session.get(User, int(user_id))
+
+    # Registra o token CSRF (utils.py) como função global do Jinja2, para
+    # que qualquer template possa chamar {{ csrf_token() }} sem import.
+    from utils import generate_csrf_token
+
+    app.jinja_env.globals["csrf_token"] = generate_csrf_token
+
+    # Blueprints: cada um agrupa as rotas de um assunto (ver routes/).
+    from routes.auth import auth_bp
+
+    app.register_blueprint(auth_bp, url_prefix="/auth")
 
     @app.route("/")
     def home():

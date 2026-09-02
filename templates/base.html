@@ -17,11 +17,39 @@
     <!-- Header comum a todas as páginas -->
     <header class="main-header">
         <div class="container header-content">
-            <img src="{{ url_for('static', filename='img/logo.png') }}" alt="Ajuda-Lá" class="logo">
+            <!-- O arquivo original logo.png da Fase 4 não estava disponível no
+                 repositório; logo.svg foi recriado na Etapa 2 seguindo a
+                 mesma paleta em gradiente. -->
+            <img src="{{ url_for('static', filename='img/logo.svg') }}" alt="Ajuda-Lá" class="logo">
             <h1>Ajuda-Lá</h1>
             <p class="tagline">Conectando quem precisa a quem pode ajudar</p>
+
+            <!-- Menu dinâmico: current_user vem do Flask-Login (injetado
+                 automaticamente no contexto do Jinja2 depois de
+                 login_manager.init_app(app) em app.py). -->
+            <nav class="main-nav">
+                {% if current_user.is_authenticated %}
+                    <span>Olá, {{ current_user.name }}</span>
+                    <a href="{{ url_for('auth.logout') }}">Sair</a>
+                {% else %}
+                    <a href="{{ url_for('auth.login') }}">Entrar</a>
+                    <a href="{{ url_for('auth.register') }}" class="btn btn-primary">Cadastrar</a>
+                {% endif %}
+            </nav>
         </div>
     </header>
+
+    <!-- Flash messages: feedback de sucesso/erro definido nas rotas com
+         flash("mensagem", "categoria") e exibido aqui em toda página. -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            <div class="flash-messages">
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ category }}">{{ message }}</div>
+                {% endfor %}
+            </div>
+        {% endif %}
+    {% endwith %}
 
     <!-- Cada página filha vai preencher este bloco de conteúdo -->
     <main>
