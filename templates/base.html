@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Ajuda-Lá{% endblock %}</title>
+
+    <!-- url_for gera o caminho correto para arquivos estáticos.
+         Nunca escreva "/static/css/style.css" na mão: use url_for. -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+
+    <!-- Fonte Poppins, mantendo a identidade visual da Fase 4 -->
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+
+    <!-- Header comum a todas as páginas -->
+    <header class="main-header">
+        <div class="container header-content">
+            <img src="{{ url_for('static', filename='img/logo.png') }}" alt="Ajuda-Lá" class="logo">
+            <h1>Ajuda-Lá</h1>
+            <p class="tagline">Conectando quem precisa a quem pode ajudar</p>
+        </div>
+    </header>
+
+    <!-- Cada página filha vai preencher este bloco de conteúdo -->
+    <main>
+        {% block content %}{% endblock %}
+    </main>
+
+    <!-- Footer comum -->
+    <footer class="main-footer">
+        <div class="container">
+            <p>&copy; 2026 Ajuda-Lá — Projeto Acadêmico FIAP</p>
+        </div>
+    </footer>
+
+    <!-- JavaScript compartilhado por todas as páginas -->
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+
+    <!-- Bloco opcional para JS específico de cada página -->
+    {% block scripts %}{% endblock %}
+</body>
+</html>
