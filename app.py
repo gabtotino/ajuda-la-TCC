@@ -152,4 +152,19 @@ def create_app(config_class=Config):
 # no .env — o depurador permite executar código no servidor, então nunca
 # pode ficar ativo fora da máquina de desenvolvimento.
 if __name__ == "__main__":
-    create_app().run(debug=os.environ.get("FLASK_DEBUG") == "1")
+    app = create_app()
+
+    # RESET_DB_ON_START=1 no .env: cada "python app.py" começa com o banco
+    # limpo e os dados de demonstração (útil para apresentações). O reset
+    # acontece ao INICIAR, não ao fechar, porque Ctrl+C ou fechar o terminal
+    # interrompe o processo sem garantia de rodar código de limpeza.
+    # Com FLASK_DEBUG=1 o recarregador reinicia o servidor a cada arquivo
+    # salvo (variável WERKZEUG_RUN_MAIN="true" no processo filho); só
+    # resetamos na primeira inicialização, senão os dados sumiriam a cada edição.
+    if os.environ.get("RESET_DB_ON_START") == "1" and os.environ.get("WERKZEUG_RUN_MAIN") != "true":
+        from seed import seed_database
+
+        with app.app_context():
+            seed_database()
+
+    app.run(debug=os.environ.get("FLASK_DEBUG") == "1")

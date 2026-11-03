@@ -245,6 +245,12 @@ python app.py
 
 Acesse `http://localhost:5000`.
 
+> **Modo demonstração:** com `RESET_DB_ON_START=1` no `.env`, cada
+> `python app.py` apaga o banco e recria os dados de demonstração —
+> cadastros feitos durante os testes somem ao reiniciar o servidor. O reset
+> acontece ao iniciar (e não ao fechar), porque Ctrl+C ou fechar o terminal
+> interrompe o processo sem garantia de executar código de limpeza.
+
 ### 7. Testes automatizados
 
 ```bash

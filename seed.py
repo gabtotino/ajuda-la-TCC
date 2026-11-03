@@ -4,17 +4,18 @@
 Rode com:
     python seed.py
 
+Ou deixe RESET_DB_ON_START=1 no .env para o banco ser resetado sempre
+que o servidor iniciar com "python app.py".
+
 Atenção: ele APAGA e recria todas as tabelas antes de inserir os dados.
 Nunca rode em um banco que já tenha cadastros reais que você queira manter.
 """
 
 from datetime import date, datetime, timedelta
 
-from app import create_app
 from extensions import db
 from models import Application, Review, Task, User
 
-app = create_app()
 
 TODAY = date.today()
 NOW = datetime.utcnow()
@@ -55,7 +56,12 @@ def make_task(contractor, title, description, category, city, neighborhood, valu
     )
 
 
-with app.app_context():
+def seed_database():
+    """Apaga tudo e recria os dados de demonstração.
+
+    Precisa rodar dentro de um app context. Usada por este script e pelo
+    app.py quando RESET_DB_ON_START=1.
+    """
     # Recomeça do zero para evitar duplicar dados a cada execução.
     db.drop_all()
     db.create_all()
@@ -189,3 +195,10 @@ with app.app_context():
     print(f"  Prestador (com histórico): {joao.email}")
     print(f"  Prestador (novo):          {rafael.email}")
     print(f"  Contratante + prestadora:  {carla.email}")
+
+
+if __name__ == "__main__":
+    from app import create_app
+
+    with create_app().app_context():
+        seed_database()
