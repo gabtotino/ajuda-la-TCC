@@ -45,6 +45,10 @@ def contractor():
         .all()
     )
 
+    # Tarefas concluídas que ainda não foram avaliadas: próximo passo
+    # destacado no topo do painel.
+    pending_reviews = [task for task in tasks_by_status[Task.STATUS_DONE] if task.review is None]
+
     stats = {
         "total": len(tasks),
         "abertas": len(tasks_by_status[Task.STATUS_OPEN]),
@@ -57,6 +61,7 @@ def contractor():
         "dashboard/contractor.html",
         tasks_by_status=tasks_by_status,
         pending_applications=pending_applications,
+        pending_reviews=pending_reviews,
         stats=stats,
         show_provider_tab=current_user.is_provider,
     )

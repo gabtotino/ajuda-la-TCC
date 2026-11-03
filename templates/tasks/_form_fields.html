@@ -1,0 +1,83 @@
+{# Campos compartilhados entre criar e editar tarefa. Espera no contexto:
+   form (dict com os valores atuais), categories, time_periods, today. #}
+<fieldset class="form-section">
+    <legend>O que você precisa?</legend>
+
+    <div class="form-group">
+        <label for="title">Título</label>
+        <input type="text" id="title" name="title" value="{{ form.title or '' }}" maxlength="150"
+               placeholder="Ex.: Lavar carro no sábado" required>
+    </div>
+
+    <div class="form-group">
+        <label for="category">Categoria</label>
+        <select id="category" name="category" required>
+            <option value="" disabled {% if not form.category %}selected{% endif %}>Selecione...</option>
+            {% for cat in categories %}
+                <option value="{{ cat }}" {% if cat == form.category %}selected{% endif %}>{{ cat }}</option>
+            {% endfor %}
+        </select>
+    </div>
+
+    <div class="form-group">
+        <label for="description">Descrição</label>
+        <textarea id="description" name="description" rows="4" maxlength="2000" required
+                  placeholder="Conte o que precisa ser feito, tamanho do serviço, detalhes importantes...">{{ form.description or '' }}</textarea>
+    </div>
+
+    <div class="form-group">
+        <label for="requirements">Requisitos <span class="optional">(opcional)</span></label>
+        <textarea id="requirements" name="requirements" rows="2" maxlength="1000"
+                  placeholder="Ex.: trazer as próprias ferramentas; ter experiência com cães grandes">{{ form.requirements or '' }}</textarea>
+    </div>
+</fieldset>
+
+<fieldset class="form-section">
+    <legend>Onde?</legend>
+    <div class="form-row">
+        <div class="form-group">
+            <label for="city">Cidade</label>
+            <input type="text" id="city" name="city" value="{{ form.city or '' }}" maxlength="80"
+                   placeholder="Ex.: São Paulo" required>
+        </div>
+        <div class="form-group">
+            <label for="neighborhood">Bairro</label>
+            <input type="text" id="neighborhood" name="neighborhood" value="{{ form.neighborhood or '' }}" maxlength="80"
+                   placeholder="Ex.: Vila Mariana" required>
+        </div>
+    </div>
+    <p class="form-hint-text">O endereço exato fica para combinar diretamente com o prestador escolhido.</p>
+</fieldset>
+
+<fieldset class="form-section">
+    <legend>Quando?</legend>
+    <div class="form-row">
+        <div class="form-group">
+            <label for="desired_date">Data desejada</label>
+            <input type="date" id="desired_date" name="desired_date" value="{{ form.desired_date or '' }}"
+                   min="{{ today.isoformat() }}" required>
+        </div>
+        <div class="form-group">
+            <label for="time_period">Período</label>
+            <select id="time_period" name="time_period">
+                {% for code, label in time_periods.items() %}
+                    <option value="{{ code }}" {% if code == (form.time_period or 'qualquer') %}selected{% endif %}>{{ label }}</option>
+                {% endfor %}
+            </select>
+        </div>
+    </div>
+    <div class="form-check">
+        <input type="checkbox" id="is_flexible" name="is_flexible" {% if form.is_flexible %}checked{% endif %}>
+        <label for="is_flexible">Tenho flexibilidade de data e horário</label>
+    </div>
+</fieldset>
+
+<fieldset class="form-section">
+    <legend>Quanto?</legend>
+    <div class="form-group form-group-narrow">
+        <label for="value">Valor oferecido (R$)</label>
+        <input type="text" inputmode="decimal" id="value" name="value" value="{{ form.value or '' }}"
+               placeholder="Ex.: 80,00" required>
+        <p class="form-hint-text">Os prestadores podem propor outro valor ao se candidatar.</p>
+    </div>
+</fieldset>

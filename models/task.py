@@ -1,7 +1,7 @@
 # models/task.py
 """Model da tarefa publicada por um contratante."""
 
-from datetime import datetime
+from datetime import date, datetime
 
 from extensions import db
 
@@ -20,6 +20,13 @@ class Task(db.Model):
     STATUS_CANCELED = "cancelada"
     STATUSES = (STATUS_OPEN, STATUS_IN_PROGRESS, STATUS_DONE, STATUS_CANCELED)
 
+    STATUS_LABELS = {
+        STATUS_OPEN: "Aberta",
+        STATUS_IN_PROGRESS: "Em andamento",
+        STATUS_DONE: "Concluída",
+        STATUS_CANCELED: "Cancelada",
+    }
+
     # Categorias fixas (em vez de texto livre) para que o filtro da
     # listagem e o assistente de IA (Etapa 11) sempre trabalhem com o
     # mesmo vocabulário.
@@ -36,11 +43,37 @@ class Task(db.Model):
         "Outros",
     )
 
+    # Período do dia em que o contratante quer o serviço. Guardamos um
+    # código curto e exibimos o rótulo — assim o texto pode mudar sem
+    # precisar de migration.
+    TIME_PERIODS = {
+        "manha": "Manhã",
+        "tarde": "Tarde",
+        "noite": "Noite",
+        "qualquer": "Qualquer horário",
+    }
+
+    # Tarefas com data desejada até N dias à frente recebem o selo
+    # "Urgente" nos cards — calculado, não armazenado, para nunca ficar
+    # desatualizado.
+    URGENT_WITHIN_DAYS = 2
+
     id = db.Column(db.Integer, primary_key=True)
     title = db.Column(db.String(150), nullable=False)
     description = db.Column(db.Text, nullable=False)
+    requirements = db.Column(db.Text, nullable=True)
     category = db.Column(db.String(80), nullable=False, index=True)
-    location = db.Column(db.String(150), nullable=False)
+
+    # Localização estruturada (antes era um único campo de texto livre):
+    # separar cidade e bairro permite filtrar a listagem por cada um.
+    city = db.Column(db.String(80), nullable=False, index=True)
+    neighborhood = db.Column(db.String(80), nullable=False, default="")
+
+    # Agenda: data desejada (opcional no banco por causa das tarefas
+    # antigas, obrigatória no formulário), período e se há flexibilidade.
+    desired_date = db.Column(db.Date, nullable=True, index=True)
+    time_period = db.Column(db.String(20), nullable=False, default="qualquer")
+    is_flexible = db.Column(db.Boolean, nullable=False, default=False)
 
     # Numeric garante precisão decimal exata para valores em reais.
     # Float sofreria com arredondamento binário (ex.: 0.1 + 0.2 != 0.3 em
@@ -72,6 +105,62 @@ class Task(db.Model):
     accepted_provider = db.relationship(
         "User", foreign_keys=[accepted_provider_id], lazy=True
     )
+
+    # cascade="all, delete-orphan": ao excluir a tarefa, o SQLAlchemy apaga
+    # junto candidaturas, mensagens e avaliação, sem deixar linhas órfãs
+    # apontando para um task_id que não existe mais.
+    applications = db.relationship(
+        "Application",
+        back_populates="task",
+        cascade="all, delete-orphan",
+        order_by="Application.created_at",
+        lazy=True,
+    )
+    messages = db.relationship(
+        "Message", back_populates="task", cascade="all, delete-orphan", lazy=True
+    )
+    review = db.relationship(
+        "Review",
+        back_populates="task",
+        cascade="all, delete-orphan",
+        uselist=False,
+        lazy=True,
+    )
+
+    @property
+    def location_label(self):
+        """'Bairro, Cidade' (ou só a cidade, quando não há bairro)."""
+        if self.neighborhood:
+            return f"{self.neighborhood}, {self.city}"
+        return self.city
+
+    @property
+    def time_period_label(self):
+        return self.TIME_PERIODS.get(self.time_period, "Qualquer horário")
+
+    @property
+    def status_label(self):
+        return self.STATUS_LABELS.get(self.status, self.status)
+
+    @property
+    def is_urgent(self):
+        if self.status != self.STATUS_OPEN or not self.desired_date:
+            return False
+        days_left = (self.desired_date - date.today()).days
+        return 0 <= days_left <= self.URGENT_WITHIN_DAYS
+
+    def is_involved(self, user):
+        """Contratante, prestador aceito ou alguém que se candidatou."""
+        if not user or not user.is_authenticated:
+            return False
+        if user.id in (self.contractor_id, self.accepted_provider_id):
+            return True
+        return any(a.provider_id == user.id for a in self.applications)
+
+    def can_be_viewed_by(self, user):
+        # Tarefa aberta é pública; depois de encerrada, só os envolvidos
+        # continuam vendo os detalhes (endereço, candidatos, avaliação...).
+        return self.status == self.STATUS_OPEN or self.is_involved(user)
 
     def __repr__(self):
         return f"<Task {self.id} {self.title!r}>"

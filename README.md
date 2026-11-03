@@ -22,40 +22,60 @@ dados, autenticação e um assistente de IA.
 ## Funcionalidades implementadas
 
 - **Cadastro, login e logout** (Flask-Login, senha em hash, proteção CSRF em
-  todos os formulários).
+  todos os formulários, logout via `POST`, retorno seguro à página de origem
+  após o login).
 - **Perfil de usuário:** visualização e edição (nome, cidade, bio, papéis de
-  contratante/prestador), com avaliação média exibida quando aplicável.
-- **CRUD de tarefas:** criar, listar (com busca por texto e filtro por
-  categoria), ver detalhe, editar, cancelar e excluir — com controle de
-  acesso (só o dono edita/exclui).
-- **Candidaturas:** um prestador se candidata a uma tarefa aberta; o
-  contratante vê os candidatos e aceita um deles, o que move a tarefa para
-  "em andamento" e recusa automaticamente as demais candidaturas; o
-  contratante marca a tarefa como concluída ao final.
+  contratante/prestador). Prestadores exibem média, número de avaliações,
+  tarefas concluídas e a lista de avaliações recebidas.
+- **Tarefas com agenda e localização estruturada:** título, descrição,
+  requisitos, categoria, **cidade e bairro**, **data desejada, período e
+  flexibilidade**, valor. Edição, cancelamento e exclusão só pelo dono.
+- **Busca e organização:** a listagem pública mostra **apenas tarefas
+  abertas**, com filtros por cidade, bairro, categoria, faixa de valor e
+  data; ordenação (recentes, menor/maior valor, data mais próxima);
+  paginação; tempo relativo ("publicada há 2 horas") e selo de urgência.
+  Tarefas encerradas só aparecem para os envolvidos.
+- **Candidaturas com contexto:** o prestador envia uma apresentação curta
+  (obrigatória) e pode propor outro valor. O contratante compara os
+  candidatos lado a lado — cidade, bio, média de avaliação, tarefas
+  concluídas, mensagem e valor proposto — antes de escolher. Ao escolher,
+  a tarefa vai para "em andamento", o valor proposto vira o combinado e os
+  demais candidatos são recusados.
+- **Avaliações:** ao concluir, o contratante avalia o prestador (1 a 5
+  estrelas + comentário opcional), uma única vez por tarefa. A média do
+  prestador é recalculada na hora.
 - **Dashboard:** painel do contratante (tarefas por status, candidatos
-  pendentes) e painel do prestador (candidaturas enviadas, aceitas,
-  concluídas), com abas quando o usuário tem os dois papéis.
+  pendentes, avaliações pendentes como próximo passo) e painel do prestador
+  (candidaturas enviadas, aceitas, concluídas), com abas quando o usuário
+  tem os dois papéis.
 - **Assistente de IA:** no formulário de criação de tarefa, o contratante
   pode descrever o pedido em linguagem natural (ex.: *"preciso lavar meu
   carro sábado, pago 50 reais"*) e a IA preenche título, descrição,
   categoria e valor sugerido automaticamente. Se a API falhar ou a chave
   não estiver configurada, o formulário continua utilizável normalmente
   (preenchimento manual).
-- **Páginas de erro customizadas** (404 e 500) com a identidade visual do site.
+- **Experiência mobile:** menu hambúrguer acessível, áreas de toque de 44px+,
+  contraste revisado (laranja escurecido para textos e botões, WCAG AA).
+- **Segurança:** `SECRET_KEY` obrigatória (o app não inicia sem ela), modo
+  debug só com `FLASK_DEBUG=1`, autorização validada no servidor em todas
+  as ações, páginas de erro consistentes (403, 404, 413, 500) e exclusão em
+  cascata (sem candidaturas, mensagens, avaliações ou imagens órfãs).
+- **Testes automatizados** (pytest): autenticação, permissões, candidatura,
+  aceite, conclusão e avaliações.
 
 ### Fora do escopo desta entrega (roadmap futuro)
 
-Para focar no fluxo principal (publicar → candidatar → aceitar → concluir),
-as seguintes funcionalidades **não foram implementadas nesta fase** e ficam
-como próximos passos do roadmap:
+Para focar no fluxo principal (publicar → candidatar → escolher → concluir
+→ avaliar), as seguintes funcionalidades ficam como próximos passos:
 
-- **Upload de imagens** nas tarefas e no perfil (Etapa 6 do planejamento
-  original) — o model já tem a coluna `image_filename` pronta para isso.
-- **Avaliações** com nota e comentário ao final da tarefa (Etapa 9) — o
-  model `Review` já existe no banco, só falta a interface.
-- **Mensagens/chat** entre contratante e prestador aceito (Etapa 10) — o
-  model `Message` também já existe, pronto para receber a implementação
-  com polling via JavaScript.
+- **Próxima iteração (P1):** chat interno entre contratante e prestador
+  escolhido (o model `Message` já existe e é apagado em cascata com a
+  tarefa); upload seguro de até 3 imagens por tarefa (a coluna
+  `image_filename` já existe); "salvar tarefa" e alertas internos por
+  categoria/cidade para prestadores; painéis com histórico mais completo.
+- **Fora do MVP (P2):** pagamentos, mapas e geolocalização em tempo real,
+  verificação de documentos, notificações por e-mail/push/WhatsApp,
+  recomendação avançada e painel administrativo.
 
 ## Identidade visual
 
@@ -95,12 +115,14 @@ Etapas concluídas nesta entrega:
 7. Dashboards diferenciados por papel (contratante e prestador)
 8. Assistente de IA para criação de tarefas em linguagem natural
 9. Documentação, páginas de erro customizadas e dados de demonstração
+10. Refinamento do MVP: avaliações, candidaturas comparáveis, agenda e
+    localização estruturada, filtros/ordenação/paginação, menu mobile,
+    reforço de segurança e testes automatizados
 
-As etapas de **upload de imagens**, **avaliações** e **mensagens** foram
-deliberadamente escopadas para uma próxima iteração — os models
-`Message` e `Review` e a coluna `image_filename` já estão modelados no
-banco, prontos para receber a implementação (ver seção *Fora do escopo
-desta entrega*).
+As etapas de **upload de imagens** e **mensagens** foram deliberadamente
+escopadas para uma próxima iteração — o model `Message` e a coluna
+`image_filename` já estão modelados no banco, prontos para receber a
+implementação (ver seção *Fora do escopo desta entrega*).
 
 ### Condução do projeto
 
@@ -176,7 +198,9 @@ Copie `.env.example` para `.env` e preencha:
 cp .env.example .env
 ```
 
-- `SECRET_KEY`: gere uma com `python -c "import secrets; print(secrets.token_hex(32))"`.
+- `SECRET_KEY` (**obrigatória** — o app não inicia sem ela): gere uma com
+  `python -c "import secrets; print(secrets.token_hex(32))"`.
+- `FLASK_DEBUG`: use `1` só na sua máquina, durante o desenvolvimento.
 - `OPENAI_API_KEY`: opcional. Sem ela, o assistente de IA mostra um aviso e
   o formulário de criação de tarefa continua funcionando normalmente
   (preenchimento manual).
@@ -187,7 +211,10 @@ cp .env.example .env
 flask db upgrade
 ```
 
-Isso cria `ajudala.db` na raiz do projeto com todas as tabelas.
+Isso cria `ajudala.db` na raiz do projeto com todas as tabelas — ou, num
+banco já existente, aplica as migrations novas preservando os dados (a
+migration de localização converte o antigo campo "Bairro, Cidade" em
+cidade e bairro separados).
 
 ### 5. Dados de demonstração (opcional, recomendado)
 
@@ -195,15 +222,16 @@ Isso cria `ajudala.db` na raiz do projeto com todas as tabelas.
 python seed.py
 ```
 
-Cria 3 contas de demonstração, todas com senha `senha123`:
+Cria 4 contas de demonstração, todas com senha `senha123`:
 
 | E-mail | Papel |
 |---|---|
-| `mariana@example.com` | Contratante |
-| `joao@example.com` | Prestador |
-| `carla@example.com` | Contratante **e** prestador |
+| `mariana@example.com` | Contratante (tarefa com 3 candidatos para comparar e 1 avaliação pendente) |
+| `joao@example.com` | Prestador com histórico (2 avaliações, média 4,5) |
+| `rafael@example.com` | Prestador novo |
+| `carla@example.com` | Contratante **e** prestadora |
 
-E popula 4 tarefas em status diferentes (aberta, em andamento, concluída)
+E popula 9 tarefas em todos os status (abertas, em andamento, concluídas)
 para que o fluxo completo já apareça pronto ao navegar pelo site.
 
 > **Atenção:** `seed.py` apaga e recria todas as tabelas. Não rode em um
@@ -217,6 +245,24 @@ python app.py
 
 Acesse `http://localhost:5000`.
 
+### 7. Testes automatizados
+
+```bash
+pip install -r requirements-dev.txt
+python -m pytest
+```
+
+Cada teste roda num banco SQLite em memória, isolado do `ajudala.db`.
+
+### 8. Gerar o pacote de entrega
+
+```bash
+git archive --format=zip -o ajuda-la-entrega.zip HEAD
+```
+
+O `git archive` empacota só o que está versionado: `.git`, `venv/`, `.env` e
+o banco local ficam de fora automaticamente (veja `.gitignore`).
+
 ## Estrutura do projeto
 
 ```
@@ -224,10 +270,11 @@ ajuda-la/
 ├── app.py                  # Application factory, registro de blueprints
 ├── config.py                # Configurações (lidas do .env)
 ├── extensions.py             # db, migrate, login_manager
-├── utils.py                  # CSRF manual, formatação de moeda, ícones de categoria
+├── utils.py                  # CSRF manual, moeda, datas, tempo relativo, ícones
 ├── seed.py                   # Dados de demonstração
 ├── models/                   # User, Task, Application, Message, Review
-├── routes/                   # Blueprints: auth, profile, tasks, applications, dashboard, ai
+├── routes/                   # Blueprints: auth, profile, tasks, applications, reviews, dashboard, ai
+├── tests/                    # Testes automatizados (pytest)
 ├── services/
 │   └── ai_service.py         # Integração com a OpenAI API
 ├── templates/                # Jinja2, organizados por blueprint

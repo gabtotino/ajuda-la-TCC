@@ -18,9 +18,16 @@ class Application(db.Model):
     task_id = db.Column(db.Integer, db.ForeignKey("tasks.id"), nullable=False)
     provider_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
     status = db.Column(db.String(20), nullable=False, default=STATUS_PENDING)
+
+    # Contexto para o contratante comparar candidatos antes de aceitar:
+    # uma apresentação curta (obrigatória) e um valor proposto (opcional,
+    # quando o prestador quer negociar o valor anunciado).
+    message = db.Column(db.Text, nullable=False, default="")
+    proposed_value = db.Column(db.Numeric(10, 2), nullable=True)
+
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
 
-    task = db.relationship("Task", backref="applications", lazy=True)
+    task = db.relationship("Task", back_populates="applications", lazy=True)
     provider = db.relationship("User", backref="applications_sent", lazy=True)
 
     __table_args__ = (

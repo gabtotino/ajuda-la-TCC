@@ -1,7 +1,28 @@
+# Ambiente virtual e segredos — nunca versionar
 venv/
+.venv/
 .env
-__pycache__/
-*.pyc
+
+# Banco de dados local (é recriado com "flask db upgrade" + "python seed.py")
 ajudala.db
+*.db
+*.sqlite3
+instance/
+
+# Uploads feitos pelos usuários
 static/uploads/*
 !static/uploads/.gitkeep
+
+# Artefatos de Python e testes
+__pycache__/
+*.pyc
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Pacotes de entrega gerados localmente
+*.zip
+
+# Configuração local de ferramentas/editor
+.claude/
+.vscode/

@@ -22,9 +22,7 @@ class Review(db.Model):
     comment = db.Column(db.Text, nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
 
-    task = db.relationship(
-        "Task", backref=db.backref("review", uselist=False), lazy=True
-    )
+    task = db.relationship("Task", back_populates="review", lazy=True)
     reviewer = db.relationship(
         "User", foreign_keys=[reviewer_id], backref="reviews_given", lazy=True
     )

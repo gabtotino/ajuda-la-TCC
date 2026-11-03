@@ -1,21 +1,40 @@
-{# Macro reutilizada na home e na listagem de tarefas — um único lugar
-   define a aparência do card, então mudar o design não exige editar as
-   duas páginas separadamente. #}
+{# Macro reutilizada na home, na listagem e nos painéis — um único lugar
+   define a aparência do card. Hierarquia: categoria/urgência > título >
+   resumo > onde/quando > valor. #}
 {% macro task_card(task) %}
 <article class="task-card">
     <div class="task-card-top">
-        <div class="task-icon-tile">{{ task.category|category_icon }}</div>
-        {% if task.status != "aberta" %}
-            <span class="task-status task-status-{{ task.status }}">{{ task.status.replace('_', ' ') }}</span>
-        {% else %}
-            <span class="task-category">{{ task.category }}</span>
-        {% endif %}
+        <span class="task-icon-tile" aria-hidden="true">{{ task.category|category_icon }}</span>
+        <div class="task-card-tags">
+            {% if task.is_urgent %}
+                <span class="tag tag-urgent">Urgente</span>
+            {% endif %}
+            {% if task.status != "aberta" %}
+                <span class="task-status task-status-{{ task.status }}">{{ task.status_label }}</span>
+            {% else %}
+                <span class="task-category">{{ task.category }}</span>
+            {% endif %}
+        </div>
     </div>
-    <h3><a href="{{ url_for('tasks.detail', task_id=task.id) }}">{{ task.title }}</a></h3>
-    <p class="task-location">📍 {{ task.location }}</p>
+
+    <h3 class="task-card-title">
+        <a href="{{ url_for('tasks.detail', task_id=task.id) }}" class="stretched-link">{{ task.title }}</a>
+    </h3>
+    <p class="task-card-excerpt">{{ task.description|truncate(95, True, '…') }}</p>
+
+    <ul class="task-meta">
+        <li><span aria-hidden="true">📍</span> {{ task.location_label }}</li>
+        {% if task.desired_date %}
+            <li>
+                <span aria-hidden="true">📅</span> {{ task.desired_date|date_br }} · {{ task.time_period_label|lower }}
+                {% if task.is_flexible %}<span class="muted">(flexível)</span>{% endif %}
+            </li>
+        {% endif %}
+    </ul>
+
     <div class="task-footer">
-        <span class="task-price"><small>Valor</small>R$ {{ task.value|brl }}</span>
-        <a href="{{ url_for('tasks.detail', task_id=task.id) }}" class="task-link-btn" aria-label="Ver detalhes de {{ task.title }}">→</a>
+        <span class="task-price"><small>Valor oferecido</small>R$ {{ task.value|brl }}</span>
+        <span class="task-posted">{{ task.created_at|time_ago }}</span>
     </div>
 </article>
 {% endmacro %}

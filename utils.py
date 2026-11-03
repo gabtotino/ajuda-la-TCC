@@ -9,6 +9,8 @@ antes de processar qualquer POST.
 """
 
 import secrets
+from datetime import date, datetime
+from decimal import Decimal, InvalidOperation
 
 from flask import session
 
@@ -27,7 +29,69 @@ def generate_csrf_token():
 
 def validate_csrf_token(submitted_token):
     """Confere se o token enviado no formulário bate com o da sessão."""
-    return submitted_token is not None and submitted_token == session.get("csrf_token")
+    expected = session.get("csrf_token")
+    if not submitted_token or not expected:
+        return False
+    # compare_digest evita que o tempo da comparação revele o token.
+    return secrets.compare_digest(submitted_token, expected)
+
+
+def parse_money(raw_value):
+    """Converte um valor digitado (aceita '1.234,56', '50,00' ou '50.00')
+    em Decimal positivo. Retorna None se não for um valor válido."""
+    if not raw_value:
+        return None
+    raw_value = raw_value.strip().replace("R$", "").strip()
+    if "," in raw_value:
+        raw_value = raw_value.replace(".", "").replace(",", ".")
+    try:
+        value = Decimal(raw_value)
+    except InvalidOperation:
+        return None
+    if value <= 0 or value >= Decimal("100000"):
+        return None
+    return value.quantize(Decimal("0.01"))
+
+
+def parse_date(raw_value):
+    """Converte 'AAAA-MM-DD' (formato do <input type="date">) em date."""
+    try:
+        return datetime.strptime(raw_value or "", "%Y-%m-%d").date()
+    except ValueError:
+        return None
+
+
+def format_date_br(value):
+    """Filtro Jinja2: date -> 'seg, 03/11' (ou 'hoje' / 'amanhã')."""
+    if not value:
+        return ""
+    days = (value - date.today()).days
+    if days == 0:
+        return "hoje"
+    if days == 1:
+        return "amanhã"
+    weekdays = ("seg", "ter", "qua", "qui", "sex", "sáb", "dom")
+    return f"{weekdays[value.weekday()]}, {value.strftime('%d/%m')}"
+
+
+def time_ago(value):
+    """Filtro Jinja2: datetime (UTC) -> 'há 2 horas', 'há 3 dias'..."""
+    if not value:
+        return ""
+    seconds = int((datetime.utcnow() - value).total_seconds())
+    if seconds < 60:
+        return "agora mesmo"
+    minutes = seconds // 60
+    if minutes < 60:
+        return f"há {minutes} min"
+    hours = minutes // 60
+    if hours < 24:
+        return f"há {hours} hora{'s' if hours > 1 else ''}"
+    days = hours // 24
+    if days < 30:
+        return f"há {days} dia{'s' if days > 1 else ''}"
+    months = days // 30
+    return f"há {months} {'meses' if months > 1 else 'mês'}"
 
 
 # Ícone exibido nos cards de tarefa conforme a categoria. Mantido separado

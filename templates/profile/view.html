@@ -1,44 +1,73 @@
 {% extends "base.html" %}
+{% from "_macros.html" import stars, rating_summary %}
 
 {% block title %}{{ profile_user.name }} — Ajuda-Lá{% endblock %}
 
 {% block content %}
-<div class="container">
-    <div class="profile-card">
-        <div class="profile-avatar">{{ profile_user.name[0]|upper }}</div>
-        <h2>{{ profile_user.name }}</h2>
+<div class="container page-top">
+    <div class="profile-layout">
+        <section class="profile-card">
+            <div class="profile-avatar" aria-hidden="true">{{ profile_user.name[0]|upper }}</div>
+            <h1 class="profile-name">{{ profile_user.name }}</h1>
+            <p class="muted">
+                {% if profile_user.city %}📍 {{ profile_user.city }} · {% endif %}no Ajuda-Lá desde {{ profile_user.created_at.strftime('%m/%Y') }}
+            </p>
 
-        <div class="profile-roles">
-            {% if profile_user.is_contractor %}
-                <span class="role-badge">Contratante</span>
-            {% endif %}
+            <div class="profile-roles">
+                {% if profile_user.is_contractor %}<span class="role-badge">Contratante</span>{% endif %}
+                {% if profile_user.is_provider %}<span class="role-badge">Prestador</span>{% endif %}
+            </div>
+
             {% if profile_user.is_provider %}
-                <span class="role-badge">Prestador</span>
+                <div class="profile-stats">
+                    <div>
+                        <strong>{{ '%.1f'|format(profile_user.avg_rating) if profile_user.review_count else '—' }}</strong>
+                        <span>média</span>
+                    </div>
+                    <div>
+                        <strong>{{ profile_user.review_count }}</strong>
+                        <span>avaliaç{{ 'ões' if profile_user.review_count != 1 else 'ão' }}</span>
+                    </div>
+                    <div>
+                        <strong>{{ profile_user.completed_tasks_count }}</strong>
+                        <span>concluída{{ 's' if profile_user.completed_tasks_count != 1 }}</span>
+                    </div>
+                </div>
             {% endif %}
-        </div>
 
-        {% if profile_user.id == current_user.id %}
-            <a href="{{ url_for('profile.edit_profile') }}" class="btn btn-outline-primary">Editar perfil</a>
+            <div class="profile-bio">
+                <h2 class="card-subtitle">Sobre</h2>
+                <p class="prewrap">{{ profile_user.bio or "Este usuário ainda não escreveu uma bio." }}</p>
+            </div>
+
+            {% if current_user.is_authenticated and profile_user.id == current_user.id %}
+                <a href="{{ url_for('profile.edit_profile') }}" class="btn btn-outline-primary btn-sm">Editar perfil</a>
+            {% endif %}
+        </section>
+
+        {% if profile_user.is_provider %}
+            <section class="profile-reviews">
+                <h2 class="section-title">Avaliações recebidas</h2>
+                {% if reviews %}
+                    <div class="rating-overview">{{ rating_summary(profile_user) }}</div>
+                    {% for review in reviews %}
+                        <article class="review-item form-card">
+                            <div class="review-head">
+                                {{ stars(review.rating) }}
+                                <span class="muted">{{ review.created_at|time_ago }}</span>
+                            </div>
+                            {% if review.comment %}<p class="prewrap">{{ review.comment }}</p>{% endif %}
+                            <p class="muted review-by">{{ review.reviewer.name }} · {{ review.task.category }}</p>
+                        </article>
+                    {% endfor %}
+                {% else %}
+                    <div class="empty-state">
+                        <p class="empty-state-title">Ainda sem avaliações</p>
+                        <p>As avaliações aparecem aqui depois que o prestador conclui tarefas na plataforma.</p>
+                    </div>
+                {% endif %}
+            </section>
         {% endif %}
-
-        <dl class="profile-info">
-            <dt>Cidade</dt>
-            <dd>{{ profile_user.city or "Não informada" }}</dd>
-
-            <dt>Sobre</dt>
-            <dd>{{ profile_user.bio or "Este usuário ainda não escreveu uma bio." }}</dd>
-
-            {% if profile_user.is_provider %}
-                <dt>Avaliação como prestador</dt>
-                <dd class="profile-rating">
-                    {% if profile_user.avg_rating %}
-                        {{ "%.1f"|format(profile_user.avg_rating) }} / 5
-                    {% else %}
-                        Ainda sem avaliações
-                    {% endif %}
-                </dd>
-            {% endif %}
-        </dl>
     </div>
 </div>
 {% endblock %}

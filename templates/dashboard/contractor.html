@@ -39,6 +39,19 @@
         </div>
     </div>
 
+    {% if pending_reviews %}
+        <h3>Próximo passo: avalie quem te ajudou</h3>
+        {% for task in pending_reviews %}
+            <div class="list-card list-card-highlight">
+                <div>
+                    <div class="list-card-title">{{ task.title }}</div>
+                    <div class="list-card-meta">concluída com {{ task.accepted_provider.name }}</div>
+                </div>
+                <a href="{{ url_for('tasks.detail', task_id=task.id) }}#avaliar" class="btn btn-primary btn-sm">Avaliar</a>
+            </div>
+        {% endfor %}
+    {% endif %}
+
     {% if pending_applications %}
         <h3>Candidatos aguardando resposta</h3>
         {% for application in pending_applications %}

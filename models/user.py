@@ -69,5 +69,41 @@ class User(UserMixin, db.Model):
         """Confere se a senha digitada no login bate com o hash salvo."""
         return check_password_hash(self.password_hash, raw_password)
 
+    @property
+    def completed_tasks_count(self):
+        """Tarefas concluídas como prestador — sinal de confiança no perfil."""
+        from models.task import Task
+
+        return Task.query.filter_by(
+            accepted_provider_id=self.id, status=Task.STATUS_DONE
+        ).count()
+
+    @property
+    def review_count(self):
+        return len(self.reviews_received)
+
+    @property
+    def short_bio(self):
+        if not self.bio:
+            return ""
+        return self.bio if len(self.bio) <= 140 else self.bio[:137].rstrip() + "..."
+
+    def recalculate_rating(self):
+        """Atualiza avg_rating a partir das avaliações recebidas.
+
+        Chamado logo depois de criar uma Review, na mesma transação, para
+        que média e lista de avaliações nunca fiquem divergentes.
+        """
+        from models.review import Review
+
+        # Consulta direta (em vez da lista reviews_received já carregada em
+        # memória) para incluir a avaliação recém-criada na mesma transação.
+        average = (
+            db.session.query(db.func.avg(Review.rating))
+            .filter(Review.reviewed_id == self.id)
+            .scalar()
+        )
+        self.avg_rating = round(float(average), 2) if average is not None else 0.0
+
     def __repr__(self):
         return f"<User {self.id} {self.email}>"

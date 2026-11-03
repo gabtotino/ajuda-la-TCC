@@ -3,51 +3,70 @@
 
 from flask import Blueprint, abort, flash, redirect, request, url_for
 from flask_login import current_user, login_required
+from sqlalchemy.exc import IntegrityError
 
 from extensions import db
 from models import Application, Task
-from utils import validate_csrf_token
+from utils import parse_money, validate_csrf_token
 
 applications_bp = Blueprint("applications", __name__)
+
+MESSAGE_MIN_LENGTH = 10
+MESSAGE_MAX_LENGTH = 500
 
 
 @applications_bp.route("/tarefa/<int:task_id>/candidatar", methods=["POST"])
 @login_required
 def apply(task_id):
     task = db.get_or_404(Task, task_id)
+    back_to_task = redirect(url_for("tasks.detail", task_id=task.id))
 
     if not validate_csrf_token(request.form.get("csrf_token")):
-        flash("Sua sessão expirou. Tente novamente.", "error")
-        return redirect(url_for("tasks.detail", task_id=task.id))
+        abort(400)
 
     if not current_user.is_provider:
         flash("Ative o papel de prestador no seu perfil para se candidatar.", "error")
-        return redirect(url_for("tasks.detail", task_id=task.id))
-
+        return back_to_task
     if task.contractor_id == current_user.id:
-        flash("Você não pode se candidatar à sua própria tarefa.", "error")
-        return redirect(url_for("tasks.detail", task_id=task.id))
-
+        abort(403)
     if task.status != Task.STATUS_OPEN:
         flash("Esta tarefa não está mais aberta para candidaturas.", "error")
-        return redirect(url_for("tasks.detail", task_id=task.id))
+        return back_to_task
 
-    # A UniqueConstraint(task_id, provider_id) no banco (Etapa 2) já impede
-    # duplicidade em nível de dado; esta checagem aqui só existe para dar
-    # uma mensagem amigável em vez de deixar estourar um IntegrityError.
-    already_applied = Application.query.filter_by(
-        task_id=task.id, provider_id=current_user.id
-    ).first()
-    if already_applied:
-        flash("Você já se candidatou a esta tarefa.", "info")
-        return redirect(url_for("tasks.detail", task_id=task.id))
+    message = request.form.get("message", "").strip()
+    raw_value = request.form.get("proposed_value", "").strip()
+    proposed_value = parse_money(raw_value) if raw_value else None
 
-    application = Application(task_id=task.id, provider_id=current_user.id)
+    errors = []
+    if not MESSAGE_MIN_LENGTH <= len(message) <= MESSAGE_MAX_LENGTH:
+        errors.append(
+            f"Escreva uma apresentação entre {MESSAGE_MIN_LENGTH} e {MESSAGE_MAX_LENGTH} caracteres."
+        )
+    if raw_value and proposed_value is None:
+        errors.append("O valor proposto precisa ser um número maior que zero.")
+    if errors:
+        for error in errors:
+            flash(error, "error")
+        return back_to_task
+
+    application = Application(
+        task_id=task.id,
+        provider_id=current_user.id,
+        message=message,
+        proposed_value=proposed_value,
+    )
     db.session.add(application)
-    db.session.commit()
+    try:
+        db.session.commit()
+    except IntegrityError:
+        # A UniqueConstraint(task_id, provider_id) garante a regra mesmo se
+        # dois envios simultâneos passarem pela tela ao mesmo tempo.
+        db.session.rollback()
+        flash("Você já se candidatou a esta tarefa.", "info")
+        return back_to_task
 
-    flash("Candidatura enviada! O contratante vai avaliar seu perfil.", "success")
-    return redirect(url_for("tasks.detail", task_id=task.id))
+    flash("Candidatura enviada! O contratante vai comparar os candidatos e responder.", "success")
+    return back_to_task
 
 
 @applications_bp.route("/<int:application_id>/aceitar", methods=["POST"])
@@ -59,29 +78,27 @@ def accept(application_id):
     if task.contractor_id != current_user.id:
         abort(403)
     if not validate_csrf_token(request.form.get("csrf_token")):
-        flash("Sua sessão expirou. Tente novamente.", "error")
-        return redirect(url_for("tasks.detail", task_id=task.id))
-    if task.status != Task.STATUS_OPEN:
-        flash("Esta tarefa já não está mais aberta.", "error")
+        abort(400)
+    if task.status != Task.STATUS_OPEN or application.status != Application.STATUS_PENDING:
+        flash("Esta candidatura não pode mais ser aceita.", "error")
         return redirect(url_for("tasks.detail", task_id=task.id))
 
     # Aceitar um candidato move a tarefa para "em_andamento", trava o
-    # prestador escolhido em accepted_provider_id e recusa automaticamente
-    # todas as outras candidaturas pendentes — regra de negócio central
-    # desta etapa.
+    # prestador escolhido e recusa automaticamente as demais candidaturas.
     application.status = Application.STATUS_ACCEPTED
     task.status = Task.STATUS_IN_PROGRESS
     task.accepted_provider_id = application.provider_id
+    if application.proposed_value:
+        # O valor combinado passa a ser o proposto pelo prestador escolhido.
+        task.value = application.proposed_value
 
-    other_applications = Application.query.filter(
-        Application.task_id == task.id, Application.id != application.id
-    ).all()
-    for other in other_applications:
-        other.status = Application.STATUS_REJECTED
+    for other in task.applications:
+        if other.id != application.id:
+            other.status = Application.STATUS_REJECTED
 
     db.session.commit()
 
-    flash(f"{application.provider.name} foi aceito para esta tarefa.", "success")
+    flash(f"{application.provider.name} foi escolhido(a) para esta tarefa.", "success")
     return redirect(url_for("tasks.detail", task_id=task.id))
 
 
@@ -93,8 +110,7 @@ def complete(task_id):
     if task.contractor_id != current_user.id:
         abort(403)
     if not validate_csrf_token(request.form.get("csrf_token")):
-        flash("Sua sessão expirou. Tente novamente.", "error")
-        return redirect(url_for("tasks.detail", task_id=task.id))
+        abort(400)
     if task.status != Task.STATUS_IN_PROGRESS:
         flash("Só é possível concluir uma tarefa que está em andamento.", "error")
         return redirect(url_for("tasks.detail", task_id=task.id))
@@ -102,5 +118,5 @@ def complete(task_id):
     task.status = Task.STATUS_DONE
     db.session.commit()
 
-    flash("Tarefa marcada como concluída.", "success")
-    return redirect(url_for("tasks.detail", task_id=task.id))
+    flash("Tarefa concluída! Que tal avaliar o prestador agora?", "success")
+    return redirect(url_for("tasks.detail", task_id=task.id) + "#avaliar")

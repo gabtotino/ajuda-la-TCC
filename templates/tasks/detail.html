@@ -1,119 +1,257 @@
 {% extends "base.html" %}
+{% from "_macros.html" import stars, avatar, rating_summary %}
 
 {% block title %}{{ task.title }} — Ajuda-Lá{% endblock %}
 
 {% block content %}
 <div class="container page-top">
-    <div class="detail-header">
-        <div>
-            <span class="task-category">{{ task.category }}</span>
+    <a href="{{ url_for('tasks.list_tasks') }}" class="back-link">← Voltar para tarefas</a>
+
+    <header class="detail-header">
+        <div class="task-card-tags">
+            <span class="task-category">{{ task.category|category_icon }} {{ task.category }}</span>
             {% if task.status != "aberta" %}
-                <span class="task-status task-status-{{ task.status }}">{{ task.status.replace('_', ' ') }}</span>
+                <span class="task-status task-status-{{ task.status }}">{{ task.status_label }}</span>
             {% endif %}
-            <h2>{{ task.category|category_icon }} {{ task.title }}</h2>
-            <p class="task-location">📍 {{ task.location }} · publicada em {{ task.created_at.strftime('%d/%m/%Y') }}</p>
+            {% if task.is_urgent %}<span class="tag tag-urgent">Urgente</span>{% endif %}
         </div>
-    </div>
+        <h1 class="detail-title">{{ task.title }}</h1>
+        <p class="detail-meta">📍 {{ task.location_label }} · publicada {{ task.created_at|time_ago }}</p>
+    </header>
 
     <div class="detail-grid">
-        <div>
-            <div class="form-card">
-                <h2>Descrição</h2>
-                <p>{{ task.description }}</p>
-            </div>
+        {# ===================== COLUNA PRINCIPAL ===================== #}
+        <div class="detail-main">
+            <section class="form-card">
+                <h2 class="card-title">Sobre a tarefa</h2>
+                <p class="prewrap">{{ task.description }}</p>
 
-            {% if current_user.is_authenticated and task.contractor_id == current_user.id %}
-                <div class="form-card detail-section">
-                    <h2>Gerenciar tarefa</h2>
-                    <p class="form-card-subtitle">Você é o contratante desta tarefa.</p>
-                    <div class="detail-actions">
-                        {% if task.status == "aberta" %}
-                            <a href="{{ url_for('tasks.edit', task_id=task.id) }}" class="btn btn-outline-primary btn-sm">Editar</a>
-                            <form method="POST" action="{{ url_for('tasks.cancel', task_id=task.id) }}" onsubmit="return confirm('Cancelar esta tarefa?');">
-                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                                <button type="submit" class="btn btn-ghost btn-sm">Cancelar tarefa</button>
-                            </form>
-                        {% endif %}
-                        {% if task.status == "em_andamento" %}
-                            <form method="POST" action="{{ url_for('applications.complete', task_id=task.id) }}" onsubmit="return confirm('Marcar esta tarefa como concluída?');">
-                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                                <button type="submit" class="btn btn-primary btn-sm">Marcar como concluída</button>
-                            </form>
-                        {% endif %}
-                        {% if task.status in ("aberta", "cancelada") %}
-                            <form method="POST" action="{{ url_for('tasks.delete', task_id=task.id) }}" onsubmit="return confirm('Excluir esta tarefa permanentemente?');">
-                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                                <button type="submit" class="btn btn-ghost btn-sm">Excluir</button>
-                            </form>
-                        {% endif %}
-                    </div>
-                </div>
-
-                {% if task.status == "em_andamento" and task.accepted_provider %}
-                    <div class="form-card detail-section">
-                        <h2>Prestador aceito</h2>
-                        <a href="{{ url_for('profile.view_profile', user_id=task.accepted_provider.id) }}">{{ task.accepted_provider.name }}</a>
-                    </div>
+                {% if task.requirements %}
+                    <h3 class="card-subtitle">Requisitos</h3>
+                    <p class="prewrap">{{ task.requirements }}</p>
                 {% endif %}
 
-                {% if task.applications %}
-                    <div class="form-card detail-section">
-                        <h2>Candidatos ({{ task.applications|length }})</h2>
-                        {% for application in task.applications %}
-                            <div class="list-card">
-                                <div>
-                                    <div class="list-card-title">
-                                        <a href="{{ url_for('profile.view_profile', user_id=application.provider.id) }}">{{ application.provider.name }}</a>
-                                    </div>
-                                    <div class="list-card-meta">Candidatou-se em {{ application.created_at.strftime('%d/%m/%Y') }}</div>
-                                </div>
-                                {% if task.status == "aberta" and application.status == "pendente" %}
-                                    <form method="POST" action="{{ url_for('applications.accept', application_id=application.id) }}" onsubmit="return confirm('Aceitar ' + '{{ application.provider.name }}' + ' para esta tarefa?');">
-                                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                                        <button type="submit" class="btn btn-primary btn-sm">Aceitar</button>
-                                    </form>
-                                {% else %}
-                                    <span class="task-status task-status-{{ application.status }}">{{ application.status }}</span>
-                                {% endif %}
+                <h3 class="card-subtitle">Agenda</h3>
+                <ul class="info-list">
+                    <li><span>Data</span><strong>{{ task.desired_date|date_br if task.desired_date else 'A combinar' }}{% if task.desired_date %} ({{ task.desired_date.strftime('%d/%m/%Y') }}){% endif %}</strong></li>
+                    <li><span>Período</span><strong>{{ task.time_period_label }}</strong></li>
+                    <li><span>Flexibilidade</span><strong>{{ 'Data e horário flexíveis' if task.is_flexible else 'Prefere a data indicada' }}</strong></li>
+                </ul>
+            </section>
+
+            {# --- Avaliação (contratante, tarefa concluída) --- #}
+            {% if task.status == "concluida" and task.accepted_provider %}
+                <section class="form-card detail-section" id="avaliar">
+                    {% if task.review %}
+                        <h2 class="card-title">Avaliação</h2>
+                        <div class="review-item">
+                            <div class="review-head">
+                                {{ stars(task.review.rating) }}
+                                <span class="muted">{{ task.review.created_at|time_ago }}</span>
                             </div>
-                        {% endfor %}
-                    </div>
-                {% endif %}
-            {% elif current_user.is_authenticated and current_user.is_provider and task.contractor_id != current_user.id %}
-                <div class="form-card detail-section">
-                    {% if my_application %}
-                        <h2>Sua candidatura</h2>
-                        <p class="form-card-subtitle">
-                            Status: <strong>{{ my_application.status }}</strong>
-                            {% if my_application.status == "pendente" %}— aguardando o contratante.{% endif %}
-                            {% if my_application.status == "aceita" %}— você foi escolhido para esta tarefa!{% endif %}
-                            {% if my_application.status == "recusada" %}— o contratante escolheu outro prestador.{% endif %}
-                        </p>
-                    {% elif task.status == "aberta" %}
-                        <h2>Interessado?</h2>
-                        <p class="form-card-subtitle">Candidate-se e aguarde o contratante escolher quem vai ajudar.</p>
-                        <form method="POST" action="{{ url_for('applications.apply', task_id=task.id) }}">
+                            {% if task.review.comment %}<p class="prewrap">{{ task.review.comment }}</p>{% endif %}
+                            <p class="muted">— {{ task.review.reviewer.name }} avaliou {{ task.accepted_provider.name }}</p>
+                        </div>
+                    {% elif is_owner %}
+                        <h2 class="card-title">Como foi o serviço de {{ task.accepted_provider.name.split(' ')[0] }}?</h2>
+                        <p class="form-card-subtitle">Sua avaliação aparece no perfil do prestador e ajuda outros contratantes.</p>
+                        <form method="POST" action="{{ url_for('reviews.create', task_id=task.id) }}">
                             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                            <button type="submit" class="btn btn-primary">Candidatar-se</button>
+                            <fieldset class="rating-input">
+                                <legend>Nota</legend>
+                                {# Ordem invertida + flex-direction: row-reverse permite o
+                                   efeito de "acender" as estrelas anteriores só com CSS. #}
+                                {% for value in range(5, 0, -1) %}
+                                    <input type="radio" id="rating-{{ value }}" name="rating" value="{{ value }}" required>
+                                    <label for="rating-{{ value }}" title="{{ value }} estrela{{ 's' if value > 1 }}">★<span class="visually-hidden">{{ value }} estrela{{ 's' if value > 1 }}</span></label>
+                                {% endfor %}
+                            </fieldset>
+                            <div class="form-group">
+                                <label for="comment">Comentário <span class="optional">(opcional)</span></label>
+                                <textarea id="comment" name="comment" rows="3" maxlength="500" data-maxlength-counter="comment-count"
+                                          placeholder="Pontualidade, cuidado, comunicação..."></textarea>
+                                <p class="form-hint-text" id="comment-count"></p>
+                            </div>
+                            <button type="submit" class="btn btn-primary">Enviar avaliação</button>
                         </form>
                     {% else %}
-                        <p class="form-card-subtitle">Esta tarefa não está mais aceitando candidaturas.</p>
+                        <h2 class="card-title">Tarefa concluída</h2>
+                        <p class="muted">O contratante ainda não deixou uma avaliação.</p>
                     {% endif %}
-                </div>
+                </section>
+            {% endif %}
+
+            {# --- Prestador escolhido (em andamento) --- #}
+            {% if task.status == "em_andamento" and task.accepted_provider and (is_owner or task.accepted_provider_id == current_user.id) %}
+                <section class="form-card detail-section">
+                    <h2 class="card-title">Prestador escolhido</h2>
+                    <div class="person-row">
+                        {{ avatar(task.accepted_provider) }}
+                        <div>
+                            <a href="{{ url_for('profile.view_profile', user_id=task.accepted_provider.id) }}" class="person-name">{{ task.accepted_provider.name }}</a>
+                            <div class="person-meta">{{ rating_summary(task.accepted_provider) }}</div>
+                        </div>
+                    </div>
+                    {% if is_owner %}
+                        <p class="form-card-subtitle">Quando o serviço estiver feito, marque como concluída para liberar a avaliação.</p>
+                        <form method="POST" action="{{ url_for('applications.complete', task_id=task.id) }}"
+                              data-confirm="Confirmar que o serviço foi realizado?">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <button type="submit" class="btn btn-primary">Marcar como concluída</button>
+                        </form>
+                    {% else %}
+                        <p class="form-card-subtitle">Você foi escolhido(a) para esta tarefa. Combine os detalhes finais com o contratante.</p>
+                    {% endif %}
+                </section>
+            {% endif %}
+
+            {# --- Comparação de candidatos (só o contratante vê) --- #}
+            {% if is_owner and task.applications %}
+                <section class="detail-section" id="candidatos">
+                    <h2 class="section-title">Candidatos <span class="count-badge">{{ task.applications|length }}</span></h2>
+                    {% if task.status == "aberta" %}
+                        <p class="muted">Compare apresentação, avaliações e experiência antes de escolher. Ao aceitar um candidato, os demais são recusados automaticamente.</p>
+                    {% endif %}
+
+                    <div class="candidate-list">
+                        {% for application in task.applications %}
+                            {% set provider = application.provider %}
+                            <article class="candidate-card {{ 'candidate-accepted' if application.status == 'aceita' }}">
+                                <div class="candidate-head">
+                                    {{ avatar(provider) }}
+                                    <div class="candidate-id">
+                                        <a href="{{ url_for('profile.view_profile', user_id=provider.id) }}" class="person-name">{{ provider.name }}</a>
+                                        <div class="person-meta">
+                                            {% if provider.city %}📍 {{ provider.city }} · {% endif %}
+                                            {{ provider.completed_tasks_count }} tarefa{{ 's' if provider.completed_tasks_count != 1 }} concluída{{ 's' if provider.completed_tasks_count != 1 }}
+                                        </div>
+                                        <div class="person-meta">{{ rating_summary(provider) }}</div>
+                                    </div>
+                                    <span class="task-status task-status-{{ application.status }}">{{ application.status }}</span>
+                                </div>
+
+                                <blockquote class="candidate-message">{{ application.message or 'Sem mensagem.' }}</blockquote>
+
+                                {% if provider.short_bio %}
+                                    <p class="candidate-bio"><strong>Sobre:</strong> {{ provider.short_bio }}</p>
+                                {% endif %}
+
+                                <div class="candidate-foot">
+                                    <div>
+                                        {% if application.proposed_value and application.proposed_value != task.value %}
+                                            <span class="candidate-value">Propõe <strong>R$ {{ application.proposed_value|brl }}</strong></span>
+                                        {% else %}
+                                            <span class="candidate-value">Aceita o valor anunciado</span>
+                                        {% endif %}
+                                        <span class="muted"> · {{ application.created_at|time_ago }}</span>
+                                    </div>
+                                    <div class="candidate-actions">
+                                        <a href="{{ url_for('profile.view_profile', user_id=provider.id) }}" class="btn btn-ghost btn-sm">Ver perfil</a>
+                                        {% if task.status == "aberta" and application.status == "pendente" %}
+                                            <form method="POST" action="{{ url_for('applications.accept', application_id=application.id) }}"
+                                                  data-confirm="Escolher {{ provider.name }} para esta tarefa? Os demais candidatos serão recusados.">
+                                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                                <button type="submit" class="btn btn-primary btn-sm">Escolher</button>
+                                            </form>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </article>
+                        {% endfor %}
+                    </div>
+                </section>
+            {% elif is_owner and task.status == "aberta" %}
+                <section class="empty-state detail-section">
+                    <p class="empty-state-title">Nenhuma candidatura ainda</p>
+                    <p>Tarefas com descrição clara, data e valor justo costumam receber candidaturas mais rápido.</p>
+                </section>
+            {% endif %}
+            {# Ações administrativas: separadas e discretas, longe do CTA principal. #}
+            {% if is_owner and task.status in ("aberta", "cancelada") %}
+                <section class="admin-actions" aria-label="Gerenciar tarefa">
+                    <span class="admin-label">Gerenciar</span>
+                    {% if task.status == "aberta" %}
+                        <a href="{{ url_for('tasks.edit', task_id=task.id) }}" class="admin-link">Editar</a>
+                        <form method="POST" action="{{ url_for('tasks.cancel', task_id=task.id) }}"
+                              data-confirm="Cancelar esta tarefa? Candidaturas pendentes serão recusadas.">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <button type="submit" class="admin-link">Cancelar</button>
+                        </form>
+                    {% endif %}
+                    <form method="POST" action="{{ url_for('tasks.delete', task_id=task.id) }}"
+                          data-confirm="Excluir esta tarefa permanentemente? Esta ação não pode ser desfeita.">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <button type="submit" class="admin-link admin-link-danger">Excluir</button>
+                    </form>
+                </section>
             {% endif %}
         </div>
 
-        <aside class="form-card">
-            <span class="task-price"><small>Valor oferecido</small>R$ {{ task.value|brl }}</span>
-            <hr class="detail-divider">
-            <p class="form-card-subtitle detail-sidebar-label">Publicada por</p>
-            <a href="{{ url_for('profile.view_profile', user_id=task.contractor.id) }}">{{ task.contractor.name }}</a>
+        {# ===================== LATERAL ===================== #}
+        <aside class="detail-aside">
+            <section class="form-card action-card">
+                <span class="task-price task-price-lg"><small>Valor oferecido</small>R$ {{ task.value|brl }}</span>
 
-            {% if not current_user.is_authenticated %}
-                <p class="form-hint-text detail-login-hint">
-                    <a href="{{ url_for('auth.login') }}">Entre</a> para se candidatar a esta tarefa.
-                </p>
-            {% endif %}
+                {% if is_owner %}
+                    <p class="action-note">
+                        {% if task.status == "aberta" %}
+                            {{ task.applications|length }} candidatura{{ 's' if task.applications|length != 1 }} recebida{{ 's' if task.applications|length != 1 }}.
+                            {% if task.applications %}<a href="#candidatos">Comparar candidatos</a>{% endif %}
+                        {% else %}
+                            Status: <strong>{{ task.status_label }}</strong>
+                        {% endif %}
+                    </p>
+                {% elif my_application %}
+                    <div class="application-status">
+                        <p>Sua candidatura: <span class="task-status task-status-{{ my_application.status }}">{{ my_application.status }}</span></p>
+                        {% if my_application.status == "pendente" %}
+                            <p class="muted">O contratante está comparando os candidatos.</p>
+                        {% elif my_application.status == "aceita" %}
+                            <p class="muted">Você foi escolhido(a) para esta tarefa!</p>
+                        {% else %}
+                            <p class="muted">Desta vez outro prestador foi escolhido.</p>
+                        {% endif %}
+                    </div>
+                {% elif can_apply %}
+                    <form method="POST" action="{{ url_for('applications.apply', task_id=task.id) }}" class="apply-form">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <div class="form-group">
+                            <label for="message">Apresente-se ao contratante</label>
+                            <textarea id="message" name="message" rows="4" minlength="10" maxlength="500" required
+                                      data-maxlength-counter="message-count"
+                                      placeholder="Ex.: Tenho experiência com esse tipo de serviço e consigo ir no sábado de manhã."></textarea>
+                            <p class="form-hint-text" id="message-count"></p>
+                        </div>
+                        <div class="form-group">
+                            <label for="proposed_value">Propor outro valor <span class="optional">(opcional)</span></label>
+                            <input type="text" inputmode="decimal" id="proposed_value" name="proposed_value" placeholder="R$ {{ task.value|brl }}">
+                        </div>
+                        <button type="submit" class="btn btn-primary btn-block">Candidatar-se</button>
+                    </form>
+                {% elif not current_user.is_authenticated %}
+                    <a href="{{ url_for('auth.login', next=request.path) }}" class="btn btn-primary btn-block">Entrar para se candidatar</a>
+                    <p class="action-note">Não tem conta? <a href="{{ url_for('auth.register') }}">Cadastre-se grátis</a></p>
+                {% elif task.status == "aberta" and not current_user.is_provider %}
+                    <p class="action-note">Para se candidatar, ative o papel de prestador no seu <a href="{{ url_for('profile.edit_profile') }}">perfil</a>.</p>
+                {% else %}
+                    <p class="action-note">Esta tarefa não está mais recebendo candidaturas.</p>
+                {% endif %}
+            </section>
+
+            <section class="form-card">
+                <h2 class="card-subtitle card-subtitle-top">Publicada por</h2>
+                <div class="person-row">
+                    {{ avatar(task.contractor) }}
+                    <div>
+                        <a href="{{ url_for('profile.view_profile', user_id=task.contractor.id) }}" class="person-name">{{ task.contractor.name }}</a>
+                        <div class="person-meta">
+                            {% if task.contractor.city %}{{ task.contractor.city }} · {% endif %}no Ajuda-Lá desde {{ task.contractor.created_at.strftime('%m/%Y') }}
+                        </div>
+                        <div class="person-meta">{{ contractor_task_count }} tarefa{{ 's' if contractor_task_count != 1 }} publicada{{ 's' if contractor_task_count != 1 }}</div>
+                    </div>
+                </div>
+            </section>
+
         </aside>
     </div>
 </div>

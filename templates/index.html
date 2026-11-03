@@ -1,60 +1,160 @@
 {% extends "base.html" %}
 {% from "tasks/_card.html" import task_card %}
 
-{% block title %}Ajuda-Lá — Encontre ajuda para tarefas do dia a dia{% endblock %}
+{% block title %}Ajuda-Lá — Ajuda para as tarefas do dia a dia, perto de você{% endblock %}
 
 {% block content %}
-<!-- Seção de destaque com o resumo da proposta do produto -->
-<section class="hero">
-    <div class="container">
-        <span class="hero-badge">Microtarefas e renda extra</span>
-        <h2>Precisa de uma <span class="accent">mãozinha</span>? A gente conecta você a quem pode ajudar.</h2>
-        <p>
-            Lave o carro, arrume o quintal, monte aquele móvel ou peça uma ajuda na
-            mudança. Publique a tarefa, receba candidaturas de prestadores da sua
-            região e escolha quem vai te ajudar.
-        </p>
-        <div class="hero-actions">
-            <a href="{{ url_for('tasks.create') if current_user.is_authenticated else url_for('auth.register') }}" class="btn btn-primary">Publicar uma tarefa</a>
-            <a href="{{ url_for('tasks.list_tasks') }}" class="btn btn-outline-primary">Ver tarefas disponíveis</a>
+<!-- ===================== HERO ===================== -->
+<section class="hero hero-split">
+    <div class="container hero-inner">
+        <div class="hero-copy">
+            <span class="hero-badge">Microtarefas e renda extra na sua região</span>
+            <h1 class="hero-title">Precisa de uma <span class="accent">mãozinha</span>? Tem alguém pertinho pronto para ajudar.</h1>
+            <p class="hero-lead">
+                Publique a tarefa em 2 minutos, compare candidatos com avaliações reais
+                e escolha quem vai lavar o carro, montar o móvel ou ajudar na mudança.
+            </p>
+            <div class="hero-actions">
+                <a href="{{ url_for('tasks.create') if current_user.is_authenticated else url_for('auth.register') }}" class="btn btn-primary btn-lg">Publicar uma tarefa</a>
+                <a href="{{ url_for('tasks.list_tasks') }}" class="btn btn-outline-primary btn-lg">Quero ganhar uma renda extra</a>
+            </div>
+            <ul class="hero-trust">
+                <li>✓ Grátis para publicar</li>
+                <li>✓ Você escolhe quem contratar</li>
+                <li>✓ Avaliações após cada serviço</li>
+            </ul>
+        </div>
+
+        <!-- Ilustração em SVG inline: leve, nítida em qualquer tela e já nas
+             cores da marca (não depende de imagem externa). -->
+        <div class="hero-art" aria-hidden="true">
+            <svg viewBox="0 0 440 380" xmlns="http://www.w3.org/2000/svg" role="presentation">
+                <defs>
+                    <linearGradient id="g-orange" x1="0" y1="0" x2="1" y2="1">
+                        <stop offset="0" stop-color="#ff8a3d"/>
+                        <stop offset="1" stop-color="#ff4d00"/>
+                    </linearGradient>
+                </defs>
+                <circle cx="230" cy="190" r="170" fill="#fff1e8"/>
+                <circle cx="330" cy="80" r="38" fill="#ffd9bf"/>
+                <!-- Casa -->
+                <rect x="120" y="170" width="170" height="130" rx="10" fill="#ffffff" stroke="#ececea" stroke-width="2"/>
+                <path d="M105 178 L205 102 L305 178 Z" fill="url(#g-orange)"/>
+                <rect x="185" y="230" width="42" height="70" rx="6" fill="#1c1b1a"/>
+                <rect x="140" y="200" width="32" height="30" rx="5" fill="#ffd9bf"/>
+                <rect x="240" y="200" width="32" height="30" rx="5" fill="#ffd9bf"/>
+                <!-- Pessoa 1 (contratante) -->
+                <circle cx="70" cy="232" r="18" fill="#3a3836"/>
+                <rect x="50" y="254" width="40" height="58" rx="18" fill="#ff6b2c"/>
+                <!-- Pessoa 2 (prestador) -->
+                <circle cx="350" cy="238" r="18" fill="#3a3836"/>
+                <rect x="330" y="260" width="40" height="52" rx="18" fill="#1c1b1a"/>
+                <rect x="372" y="268" width="26" height="20" rx="4" fill="#ff8a3d"/>
+                <!-- Chão -->
+                <rect x="30" y="310" width="390" height="8" rx="4" fill="#ececea"/>
+                <!-- Card flutuante: checklist -->
+                <g transform="translate(14 70)">
+                    <rect width="150" height="92" rx="14" fill="#ffffff" stroke="#ececea" stroke-width="2"/>
+                    <circle cx="24" cy="26" r="9" fill="#ff6b2c"/>
+                    <path d="M19 26 l4 4 l7 -8" stroke="#fff" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+                    <rect x="42" y="21" width="86" height="9" rx="4" fill="#ececea"/>
+                    <circle cx="24" cy="50" r="9" fill="#ff6b2c"/>
+                    <path d="M19 50 l4 4 l7 -8" stroke="#fff" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+                    <rect x="42" y="45" width="70" height="9" rx="4" fill="#ececea"/>
+                    <circle cx="24" cy="74" r="9" fill="#ffd9bf"/>
+                    <rect x="42" y="69" width="78" height="9" rx="4" fill="#ececea"/>
+                </g>
+                <!-- Card flutuante: avaliação -->
+                <g transform="translate(286 132)">
+                    <rect width="140" height="54" rx="14" fill="#1c1b1a"/>
+                    <text x="16" y="24" font-family="Poppins, sans-serif" font-size="14" fill="#ffb27f">★★★★★</text>
+                    <text x="16" y="42" font-family="Poppins, sans-serif" font-size="11" fill="#ffffff">"Super pontual!"</text>
+                </g>
+            </svg>
         </div>
     </div>
 </section>
 
-<!-- Explicação rápida do fluxo, em 3 passos -->
+<!-- ===================== PROVA SOCIAL (números reais) ===================== -->
+<section class="stats-band" aria-label="A plataforma em números">
+    <div class="container stats-band-inner">
+        <div><strong>{{ stats.open_tasks }}</strong><span>tarefas abertas agora</span></div>
+        <div><strong>{{ stats.providers }}</strong><span>prestadores cadastrados</span></div>
+        <div><strong>{{ stats.done_tasks }}</strong><span>tarefas concluídas</span></div>
+    </div>
+</section>
+
+<!-- ===================== BENEFÍCIOS ===================== -->
 <section class="section">
+    <div class="container">
+        <div class="section-header">
+            <span class="section-eyebrow">Para os dois lados</span>
+            <h2>Feito para quem precisa e para quem quer ajudar</h2>
+        </div>
+        <div class="benefit-grid">
+            <article class="benefit-card">
+                <span class="benefit-kicker">Para quem contrata</span>
+                <h3>Resolva sem dor de cabeça</h3>
+                <ul class="check-list">
+                    <li>Publique com data, período e valor que cabe no seu bolso</li>
+                    <li>Compare candidatos com apresentação, histórico e avaliações</li>
+                    <li>Escolha quem você quiser — sem leilão às cegas</li>
+                </ul>
+                <a href="{{ url_for('tasks.create') if current_user.is_authenticated else url_for('auth.register') }}" class="btn btn-primary btn-sm">Publicar tarefa</a>
+            </article>
+            <article class="benefit-card benefit-card-dark">
+                <span class="benefit-kicker">Para quem presta serviço</span>
+                <h3>Renda extra no seu tempo</h3>
+                <ul class="check-list">
+                    <li>Encontre tarefas por bairro, cidade, valor e data</li>
+                    <li>Proponha seu valor e se apresente em poucas linhas</li>
+                    <li>Construa sua reputação a cada serviço concluído</li>
+                </ul>
+                <a href="{{ url_for('tasks.list_tasks') }}" class="btn btn-primary btn-sm">Ver oportunidades</a>
+            </article>
+        </div>
+    </div>
+</section>
+
+<!-- ===================== COMO FUNCIONA ===================== -->
+<section class="section section-muted">
     <div class="container">
         <div class="section-header">
             <span class="section-eyebrow">Simples assim</span>
             <h2>Como funciona</h2>
         </div>
-        <div class="steps-grid">
+        <div class="steps-grid steps-grid-4">
             <div class="step-card">
                 <div class="step-number">01</div>
-                <h3>Publique a tarefa</h3>
-                <p>Descreva o que precisa, onde e quanto está disposto a pagar.</p>
+                <h3>Publique</h3>
+                <p>Descreva a tarefa, onde, quando e quanto quer pagar — ou deixe a IA preencher.</p>
             </div>
             <div class="step-card">
                 <div class="step-number">02</div>
                 <h3>Receba candidaturas</h3>
-                <p>Prestadores da sua região se candidatam para te ajudar.</p>
+                <p>Prestadores da região se apresentam e podem propor um valor.</p>
             </div>
             <div class="step-card">
                 <div class="step-number">03</div>
-                <h3>Escolha e avalie</h3>
-                <p>Aceite o candidato ideal e avalie o serviço ao final.</p>
+                <h3>Escolha com confiança</h3>
+                <p>Compare avaliações e experiência, e aceite o melhor candidato.</p>
+            </div>
+            <div class="step-card">
+                <div class="step-number">04</div>
+                <h3>Conclua e avalie</h3>
+                <p>Ao final, sua avaliação ajuda toda a comunidade a escolher melhor.</p>
             </div>
         </div>
     </div>
 </section>
 
-<!-- Tarefas reais mais recentes, direto do banco (Etapa 5). -->
+<!-- ===================== TAREFAS EM DESTAQUE ===================== -->
 <section class="section">
     <div class="container">
         <div class="section-header">
             <span class="section-eyebrow">Oportunidades</span>
-            <h2>Tarefas em destaque</h2>
-            <p>Publicadas recentemente por quem precisa de uma mãozinha.</p>
+            <h2>Publicadas recentemente</h2>
+            <p>Tarefas abertas esperando por alguém como você.</p>
         </div>
 
         {% if featured_tasks %}
@@ -65,7 +165,8 @@
             </div>
         {% else %}
             <div class="empty-state">
-                <p>Ainda não há tarefas publicadas. <a href="{{ url_for('auth.register') }}">Seja o primeiro a publicar</a>.</p>
+                <p class="empty-state-title">Nenhuma tarefa aberta no momento</p>
+                <p>Seja a primeira pessoa a publicar uma tarefa na sua região.</p>
             </div>
         {% endif %}
 
@@ -75,12 +176,40 @@
     </div>
 </section>
 
-<!-- CTA final, como no protótipo original da Fase 4 ("Faça parte da plataforma"). -->
+<!-- ===================== DEPOIMENTOS ===================== -->
+<section class="section section-muted">
+    <div class="container">
+        <div class="section-header">
+            <span class="section-eyebrow">O que dizem</span>
+            <h2>Gente ajudando gente</h2>
+            <p class="demo-note">Depoimentos ilustrativos, criados para demonstração do MVP.</p>
+        </div>
+        <div class="testimonial-grid">
+            <figure class="testimonial">
+                <blockquote>"Publiquei de manhã e à tarde já tinha três candidatos. Escolhi pela avaliação e deu super certo."</blockquote>
+                <figcaption><strong>Mariana S.</strong> · contratante, Vila Mariana</figcaption>
+            </figure>
+            <figure class="testimonial">
+                <blockquote>"Nos fins de semana pego duas ou três tarefas perto de casa. Virou uma renda extra fixa."</blockquote>
+                <figcaption><strong>João P.</strong> · prestador, São Paulo</figcaption>
+            </figure>
+            <figure class="testimonial">
+                <blockquote>"Gosto de ver a apresentação de cada pessoa antes de decidir. Passa muita confiança."</blockquote>
+                <figcaption><strong>Carla N.</strong> · contratante e prestadora, Osasco</figcaption>
+            </figure>
+        </div>
+    </div>
+</section>
+
+<!-- ===================== CTA FINAL ===================== -->
 <section class="container">
     <div class="cta-banner">
         <h2>Faça parte da plataforma</h2>
-        <p>Cadastre-se para começar a aceitar tarefas ou publicar serviços.</p>
-        <a href="{{ url_for('auth.register') }}" class="btn btn-primary">Quero participar</a>
+        <p>Crie sua conta grátis para publicar tarefas ou começar a ganhar uma renda extra.</p>
+        <div class="hero-actions">
+            <a href="{{ url_for('auth.register') }}" class="btn btn-primary btn-lg">Criar conta grátis</a>
+            <a href="{{ url_for('tasks.list_tasks') }}" class="btn btn-outline btn-lg">Explorar tarefas</a>
+        </div>
     </div>
 </section>
 {% endblock %}

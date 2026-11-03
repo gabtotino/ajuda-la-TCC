@@ -1,7 +1,7 @@
 # routes/auth.py
 """Rotas de autenticação: cadastro, login e logout."""
 
-from flask import Blueprint, flash, redirect, render_template, request, url_for
+from flask import Blueprint, abort, flash, redirect, render_template, request, url_for
 from flask_login import current_user, login_required, login_user, logout_user
 
 from extensions import db
@@ -34,10 +34,10 @@ def register():
         # Validação manual: simples e suficiente para o escopo do MVP,
         # sem precisar de uma biblioteca de formulários (Flask-WTF).
         errors = []
-        if not name:
-            errors.append("Informe seu nome.")
-        if not email:
-            errors.append("Informe um e-mail.")
+        if not name or len(name) > 120:
+            errors.append("Informe seu nome (até 120 caracteres).")
+        if not email or "@" not in email or "." not in email.split("@")[-1] or len(email) > 120:
+            errors.append("Informe um e-mail válido.")
         if len(password) < 6:
             errors.append("A senha precisa ter pelo menos 6 caracteres.")
         if role not in ("contractor", "provider"):
@@ -93,14 +93,24 @@ def login():
 
         login_user(user)
         flash(f"Bem-vindo(a) de volta, {user.name}!", "success")
+        # Volta para a página que pediu login (ex.: candidatar-se), mas só
+        # aceita caminhos internos — "next" vindo de fora poderia mandar o
+        # usuário para um site malicioso (open redirect).
+        next_url = request.args.get("next", "")
+        if next_url.startswith("/") and not next_url.startswith("//"):
+            return redirect(next_url)
         return redirect(url_for("home"))
 
     return render_template("auth/login.html")
 
 
-@auth_bp.route("/logout")
+@auth_bp.route("/logout", methods=["POST"])
 @login_required
 def logout():
+    # POST + CSRF: com GET, qualquer site poderia deslogar o usuário só
+    # embutindo <img src=".../auth/logout"> numa página.
+    if not validate_csrf_token(request.form.get("csrf_token")):
+        abort(400)
     logout_user()
     flash("Você saiu da sua conta.", "info")
     return redirect(url_for("home"))

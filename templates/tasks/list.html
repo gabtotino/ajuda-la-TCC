@@ -1,31 +1,82 @@
 {% extends "base.html" %}
 {% from "tasks/_card.html" import task_card %}
 
-{% block title %}Tarefas disponíveis — Ajuda-Lá{% endblock %}
+{% block title %}Tarefas abertas — Ajuda-Lá{% endblock %}
 
 {% block content %}
 <div class="container page-top">
-    <div class="section-header">
-        <span class="section-eyebrow">Marketplace</span>
-        <h2>Tarefas disponíveis</h2>
-        <p>Busque por palavra-chave ou filtre por categoria.</p>
+    <div class="section-header section-header-left">
+        <span class="section-eyebrow">Oportunidades</span>
+        <h1 class="page-title">Tarefas abertas</h1>
+        <p>Encontre serviços perto de você e candidate-se em poucos cliques.</p>
     </div>
 
-    <!-- Busca e filtro via GET: a URL fica compartilhável e o botão
-         "voltar" do navegador funciona corretamente. -->
-    <form method="GET" action="{{ url_for('tasks.list_tasks') }}" class="filter-bar">
-        <input type="text" name="q" placeholder="Buscar por título ou descrição..." value="{{ query }}">
-        <select name="categoria">
-            <option value="">Todas as categorias</option>
-            {% for cat in categories %}
-                <option value="{{ cat }}" {% if cat == category %}selected{% endif %}>{{ cat }}</option>
-            {% endfor %}
-        </select>
-        <button type="submit" class="btn btn-primary btn-sm">Filtrar</button>
-        {% if query or category %}
-            <a href="{{ url_for('tasks.list_tasks') }}" class="btn btn-ghost btn-sm">Limpar</a>
-        {% endif %}
+    <!-- Busca, filtros e ordenação via GET: a URL fica compartilhável e o
+         botão "voltar" do navegador funciona corretamente. -->
+    <form method="GET" action="{{ url_for('tasks.list_tasks') }}" class="filter-panel" aria-label="Filtrar tarefas">
+        <div class="filter-search">
+            <label for="f-q" class="visually-hidden">Buscar</label>
+            <input type="search" id="f-q" name="q" placeholder="O que você procura? Ex.: pintura, mudança..." value="{{ filters.q }}">
+            <button type="submit" class="btn btn-primary">Buscar</button>
+        </div>
+
+        <div class="filter-grid">
+            <div class="filter-field">
+                <label for="f-categoria">Categoria</label>
+                <select id="f-categoria" name="categoria">
+                    <option value="">Todas</option>
+                    {% for cat in categories %}
+                        <option value="{{ cat }}" {% if cat == filters.categoria %}selected{% endif %}>{{ cat }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="filter-field">
+                <label for="f-cidade">Cidade</label>
+                <select id="f-cidade" name="cidade">
+                    <option value="">Todas</option>
+                    {% for city in cities %}
+                        <option value="{{ city }}" {% if city|lower == filters.cidade|lower %}selected{% endif %}>{{ city }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="filter-field">
+                <label for="f-bairro">Bairro</label>
+                <input type="text" id="f-bairro" name="bairro" value="{{ filters.bairro }}" placeholder="Ex.: Moema">
+            </div>
+            <div class="filter-field">
+                <label for="f-valor-min">Valor mín. (R$)</label>
+                <input type="text" inputmode="decimal" id="f-valor-min" name="valor_min" value="{{ filters.valor_min }}" placeholder="0">
+            </div>
+            <div class="filter-field">
+                <label for="f-valor-max">Valor máx. (R$)</label>
+                <input type="text" inputmode="decimal" id="f-valor-max" name="valor_max" value="{{ filters.valor_max }}" placeholder="500">
+            </div>
+            <div class="filter-field">
+                <label for="f-data">A partir de</label>
+                <input type="date" id="f-data" name="data" value="{{ filters.data }}">
+            </div>
+            <div class="filter-field">
+                <label for="f-ordem">Ordenar por</label>
+                <select id="f-ordem" name="ordem">
+                    {% for key, label in sort_options.items() %}
+                        <option value="{{ key }}" {% if key == sort %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+        </div>
+
+        <div class="filter-actions">
+            <button type="submit" class="btn btn-outline-primary btn-sm">Aplicar filtros</button>
+            {% if active_filters %}
+                <a href="{{ url_for('tasks.list_tasks') }}" class="btn btn-ghost btn-sm">Limpar filtros</a>
+            {% endif %}
+        </div>
     </form>
+
+    <p class="results-count" role="status">
+        {{ pagination.total }} tarefa{{ 's' if pagination.total != 1 }} aberta{{ 's' if pagination.total != 1 }}
+        {% if active_filters %}com os filtros escolhidos{% endif %}
+    </p>
 
     {% if tasks %}
         <div class="task-grid">
@@ -33,9 +84,38 @@
                 {{ task_card(task) }}
             {% endfor %}
         </div>
+
+        {% if pagination.pages > 1 %}
+            <nav class="pagination" aria-label="Paginação">
+                {% if pagination.has_prev %}
+                    <a href="{{ url_for('tasks.list_tasks', page=pagination.prev_num, **active_filters) }}" class="page-link">← Anterior</a>
+                {% endif %}
+                {% for page_num in pagination.iter_pages(left_edge=1, right_edge=1, left_current=1, right_current=2) %}
+                    {% if page_num %}
+                        {% if page_num == pagination.page %}
+                            <span class="page-link active" aria-current="page">{{ page_num }}</span>
+                        {% else %}
+                            <a href="{{ url_for('tasks.list_tasks', page=page_num, **active_filters) }}" class="page-link">{{ page_num }}</a>
+                        {% endif %}
+                    {% else %}
+                        <span class="page-gap">…</span>
+                    {% endif %}
+                {% endfor %}
+                {% if pagination.has_next %}
+                    <a href="{{ url_for('tasks.list_tasks', page=pagination.next_num, **active_filters) }}" class="page-link">Próxima →</a>
+                {% endif %}
+            </nav>
+        {% endif %}
     {% else %}
         <div class="empty-state">
-            <p>Nenhuma tarefa encontrada com esses filtros.</p>
+            <p class="empty-state-title">Nenhuma tarefa encontrada</p>
+            {% if active_filters %}
+                <p>Tente ampliar a busca: remova algum filtro ou escolha outra cidade.</p>
+                <a href="{{ url_for('tasks.list_tasks') }}" class="btn btn-outline-primary btn-sm">Ver todas as tarefas abertas</a>
+            {% else %}
+                <p>Ainda não há tarefas abertas. Que tal publicar a primeira?</p>
+                <a href="{{ url_for('tasks.create') }}" class="btn btn-primary btn-sm">Publicar tarefa</a>
+            {% endif %}
         </div>
     {% endif %}
 </div>

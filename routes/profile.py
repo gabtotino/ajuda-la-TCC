@@ -5,7 +5,7 @@ from flask import Blueprint, flash, redirect, render_template, request, url_for
 from flask_login import current_user, login_required
 
 from extensions import db
-from models import User
+from models import Review, User
 from utils import validate_csrf_token
 
 profile_bp = Blueprint("profile", __name__)
@@ -24,7 +24,10 @@ def view_profile(user_id):
     # Perfil é visível para qualquer usuário logado (útil mais adiante para
     # o contratante avaliar um candidato antes de aceitar, Etapa 7).
     user = db.get_or_404(User, user_id)
-    return render_template("profile/view.html", profile_user=user)
+    reviews = (
+        Review.query.filter_by(reviewed_id=user.id).order_by(Review.created_at.desc()).all()
+    )
+    return render_template("profile/view.html", profile_user=user, reviews=reviews)
 
 
 @profile_bp.route("/editar", methods=["GET", "POST"])
@@ -44,8 +47,12 @@ def edit_profile():
         is_provider = request.form.get("is_provider") == "on"
 
         errors = []
-        if not name:
-            errors.append("Informe seu nome.")
+        if not name or len(name) > 120:
+            errors.append("Informe seu nome (até 120 caracteres).")
+        if len(city) > 120:
+            errors.append("A cidade deve ter no máximo 120 caracteres.")
+        if len(bio) > 600:
+            errors.append("A bio deve ter no máximo 600 caracteres.")
         if not (is_contractor or is_provider):
             errors.append("Selecione pelo menos um papel: contratante ou prestador.")
 

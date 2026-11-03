@@ -3,34 +3,53 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Ajuda-Lá: encontre ajuda para pequenas tarefas do dia a dia ou ganhe uma renda extra ajudando pessoas da sua região.">
     <title>{% block title %}Ajuda-Lá{% endblock %}</title>
 
     <!-- url_for gera o caminho correto para arquivos estáticos.
          Nunca escreva "/static/css/style.css" na mão: use url_for. -->
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css', v=asset_version) }}">
+    <link rel="icon" href="{{ url_for('static', filename='img/logo.png') }}">
 
     <!-- Fonte Poppins, mantendo a identidade visual da Fase 4 -->
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
 </head>
 <body>
+    <a href="#conteudo" class="skip-link">Pular para o conteúdo</a>
 
-    <!-- Header compacto e fixo no topo (sticky), com marca à esquerda e
-         menu dinâmico à direita. current_user vem do Flask-Login. -->
+    <!-- Header compacto e fixo no topo (sticky). No celular, o menu vira
+         um botão hambúrguer controlado por main.js. -->
     <header class="site-header">
         <div class="container">
             <a href="{{ url_for('home') }}" class="brand">
-                <img src="{{ url_for('static', filename='img/logo.png') }}" alt="Ajuda-Lá" class="logo">
+                <img src="{{ url_for('static', filename='img/logo.png') }}" alt="" class="logo">
                 <span class="brand-name">Ajuda-Lá</span>
             </a>
 
-            <nav class="main-nav">
+            <button type="button" class="nav-toggle" aria-controls="main-nav" aria-expanded="false" aria-label="Abrir menu">
+                <span class="nav-toggle-bar"></span>
+                <span class="nav-toggle-bar"></span>
+                <span class="nav-toggle-bar"></span>
+            </button>
+
+            <nav class="main-nav" id="main-nav" aria-label="Menu principal">
+                <a href="{{ url_for('tasks.list_tasks') }}">Tarefas</a>
                 {% if current_user.is_authenticated %}
+                    {% if current_user.is_contractor %}
+                        <a href="{{ url_for('tasks.create') }}">Publicar</a>
+                    {% endif %}
                     <a href="{{ url_for('dashboard.home') }}">Painel</a>
                     <a href="{{ url_for('profile.view_profile', user_id=current_user.id) }}">Olá, {{ current_user.name.split(' ')[0] }}</a>
-                    <a href="{{ url_for('auth.logout') }}">Sair</a>
+                    <!-- Logout é POST com CSRF: um link GET poderia ser
+                         disparado por qualquer site externo. -->
+                    <form method="POST" action="{{ url_for('auth.logout') }}" class="nav-form">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <button type="submit" class="nav-link-button">Sair</button>
+                    </form>
                 {% else %}
                     <a href="{{ url_for('auth.login') }}">Entrar</a>
-                    <a href="{{ url_for('auth.register') }}" class="btn btn-primary btn-sm">Cadastrar</a>
+                    <a href="{{ url_for('auth.register') }}" class="btn btn-primary btn-sm">Criar conta</a>
                 {% endif %}
             </nav>
         </div>
@@ -40,7 +59,7 @@
          flash("mensagem", "categoria") e exibido aqui em toda página. -->
     {% with messages = get_flashed_messages(with_categories=true) %}
         {% if messages %}
-            <div class="flash-messages">
+            <div class="flash-messages" role="status">
                 {% for category, message in messages %}
                     <div class="alert alert-{{ category }}">{{ message }}</div>
                 {% endfor %}
@@ -49,19 +68,26 @@
     {% endwith %}
 
     <!-- Cada página filha vai preencher este bloco de conteúdo -->
-    <main>
+    <main id="conteudo">
         {% block content %}{% endblock %}
     </main>
 
-    <!-- Footer comum -->
     <footer class="site-footer">
-        <div class="container">
-            <p>&copy; 2026 Ajuda-Lá — Projeto Acadêmico FIAP</p>
+        <div class="container footer-inner">
+            <div class="footer-brand">
+                <span class="brand-name">Ajuda-Lá</span>
+                <p>Conectando pessoas para resolver tarefas do dia a dia.</p>
+            </div>
+            <nav class="footer-links" aria-label="Rodapé">
+                <a href="{{ url_for('tasks.list_tasks') }}">Tarefas abertas</a>
+                <a href="{{ url_for('auth.register') }}">Criar conta</a>
+            </nav>
+            <p class="footer-copy">&copy; 2026 Ajuda-Lá — Projeto Acadêmico FIAP</p>
         </div>
     </footer>
 
     <!-- JavaScript compartilhado por todas as páginas -->
-    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/main.js', v=asset_version) }}"></script>
 
     <!-- Bloco opcional para JS específico de cada página -->
     {% block scripts %}{% endblock %}

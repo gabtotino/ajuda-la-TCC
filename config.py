@@ -16,10 +16,15 @@ BASE_DIR = os.path.abspath(os.path.dirname(__file__))
 class Config:
     """Configurações compartilhadas por toda a aplicação."""
 
-    # Chave usada pelo Flask para assinar sessões e tokens CSRF.
-    # Em produção NUNCA deixe um valor padrão fixo; o fallback abaixo existe
-    # só para não travar o desenvolvimento caso o .env ainda não exista.
-    SECRET_KEY = os.environ.get("SECRET_KEY", "dev-key-troque-isso-no-env")
+    # Chave usada pelo Flask para assinar sessões e tokens CSRF. Sem valor
+    # padrão de propósito: create_app() recusa iniciar sem ela, para que
+    # nenhum ambiente rode com uma chave fixa e pública.
+    SECRET_KEY = os.environ.get("SECRET_KEY")
+
+    # Cookie de sessão inacessível ao JavaScript e não enviado em requests
+    # vindos de outros sites (camada extra contra CSRF).
+    SESSION_COOKIE_HTTPONLY = True
+    SESSION_COOKIE_SAMESITE = "Lax"
 
     # URI de conexão do SQLAlchemy. sqlite:/// + caminho absoluto garante que
     # o banco seja encontrado independentemente de onde o comando é executado.
@@ -42,3 +47,15 @@ class Config:
 
     # Chave da API da OpenAI, usada a partir da Etapa 11.
     OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY")
+
+    # Tarefas por página na listagem pública.
+    TASKS_PER_PAGE = 9
+
+
+class TestConfig(Config):
+    """Configuração usada pela suíte de testes (pytest)."""
+
+    TESTING = True
+    SECRET_KEY = "chave-de-teste"
+    SQLALCHEMY_DATABASE_URI = "sqlite://"  # banco em memória, isolado por teste
+    OPENAI_API_KEY = None

@@ -15,7 +15,7 @@ class Message(db.Model):
     content = db.Column(db.Text, nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
 
-    task = db.relationship("Task", backref="messages", lazy=True)
+    task = db.relationship("Task", back_populates="messages", lazy=True)
     sender = db.relationship("User", backref="messages_sent", lazy=True)
 
     def __repr__(self):
