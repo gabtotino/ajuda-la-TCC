@@ -24,8 +24,10 @@ CSRF_TOKEN = "token-csrf-de-teste"
 
 
 @pytest.fixture
-def app():
+def app(tmp_path):
     app = create_app(TestConfig)
+    # Uploads vão para uma pasta temporária do pytest, nunca para static/.
+    app.config["UPLOAD_FOLDER"] = str(tmp_path / "uploads")
     with app.app_context():
         _db.create_all()
         yield app

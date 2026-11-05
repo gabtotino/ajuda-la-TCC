@@ -15,6 +15,22 @@ class Message(db.Model):
     content = db.Column(db.Text, nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
 
+    # Preenchido quando o destinatário abre a conversa: alimenta o contador
+    # de mensagens não lidas no menu e no painel.
+    read_at = db.Column(db.DateTime, nullable=True)
+
+    MAX_LENGTH = 1000
+
+    def to_dict(self, viewer_id):
+        """Formato JSON consumido pelo chat.js (polling)."""
+        return {
+            "id": self.id,
+            "content": self.content,
+            "sender": self.sender.name.split(" ")[0],
+            "mine": self.sender_id == viewer_id,
+            "time": self.created_at.strftime("%d/%m %H:%M"),
+        }
+
     task = db.relationship("Task", back_populates="messages", lazy=True)
     sender = db.relationship("User", backref="messages_sent", lazy=True)
 

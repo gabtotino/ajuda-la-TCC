@@ -9,7 +9,7 @@
             <h1 class="page-title">Editar tarefa</h1>
             <p class="form-card-subtitle">Quem já se candidatou verá as informações atualizadas.</p>
 
-            <form method="POST" action="{{ url_for('tasks.edit', task_id=task.id) }}">
+            <form method="POST" action="{{ url_for('tasks.edit', task_id=task.id) }}" enctype="multipart/form-data">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 {% include "tasks/_form_fields.html" %}
                 <button type="submit" class="btn btn-primary btn-block">Salvar alterações</button>

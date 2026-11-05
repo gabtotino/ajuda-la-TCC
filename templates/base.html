@@ -27,10 +27,15 @@
                 <span class="brand-name">Ajuda-Lá</span>
             </a>
 
-            <button type="button" class="nav-toggle" aria-controls="main-nav" aria-expanded="false" aria-label="Abrir menu">
+            {# Contadores internos: mensagens não lidas + tarefas novas dos alertas. #}
+            {% set badge_total = (nav_badges.messages or 0) + (nav_badges.alerts or 0) %}
+
+            <button type="button" class="nav-toggle" aria-controls="main-nav" aria-expanded="false"
+                    aria-label="Abrir menu{{ ' (' ~ badge_total ~ ' novidades)' if badge_total }}">
                 <span class="nav-toggle-bar"></span>
                 <span class="nav-toggle-bar"></span>
                 <span class="nav-toggle-bar"></span>
+                {% if badge_total %}<span class="nav-toggle-dot" aria-hidden="true"></span>{% endif %}
             </button>
 
             <nav class="main-nav" id="main-nav" aria-label="Menu principal">
@@ -39,7 +44,12 @@
                     {% if current_user.is_contractor %}
                         <a href="{{ url_for('tasks.create') }}">Publicar</a>
                     {% endif %}
-                    <a href="{{ url_for('dashboard.home') }}">Painel</a>
+                    <a href="{{ url_for('dashboard.home') }}" class="nav-with-badge">
+                        Painel
+                        {% if badge_total %}
+                            <span class="nav-badge" aria-label="{{ badge_total }} novidade{{ 's' if badge_total > 1 }}">{{ badge_total }}</span>
+                        {% endif %}
+                    </a>
                     <a href="{{ url_for('profile.view_profile', user_id=current_user.id) }}">Olá, {{ current_user.name.split(' ')[0] }}</a>
                     <!-- Logout é POST com CSRF: um link GET poderia ser
                          disparado por qualquer site externo. -->

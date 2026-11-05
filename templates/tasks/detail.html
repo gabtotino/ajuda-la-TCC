@@ -22,6 +22,33 @@
     <div class="detail-grid">
         {# ===================== COLUNA PRINCIPAL ===================== #}
         <div class="detail-main">
+            {% if task.images %}
+                <section class="gallery gallery-{{ task.images|length }}" aria-label="Fotos da tarefa">
+                    {% for image in task.images %}
+                        {% set src = url_for('static', filename='uploads/tasks/' ~ image.filename) %}
+                        <a href="{{ src }}" target="_blank" rel="noopener" class="gallery-item">
+                            <img src="{{ src }}" alt="Foto {{ loop.index }} de {{ task.title }}" loading="lazy">
+                        </a>
+                    {% endfor %}
+                </section>
+            {% endif %}
+
+            {# Atalho do chat: só para contratante e prestador escolhido. #}
+            {% if is_chat_participant %}
+                <section class="chat-callout">
+                    <div>
+                        <strong>{{ 'Conversa com o prestador' if is_owner else 'Conversa com o contratante' }}</strong>
+                        <p class="muted">
+                            {% if task.chat_is_open %}Combine endereço, horário e detalhes por aqui.{% else %}Histórico da conversa (somente leitura).{% endif %}
+                        </p>
+                    </div>
+                    <a href="{{ url_for('messages.chat', task_id=task.id) }}" class="btn btn-primary btn-sm">
+                        {{ 'Abrir conversa' if task.chat_is_open else 'Ver histórico' }}
+                        {% if chat_unread %}<span class="inline-badge">{{ chat_unread }}</span>{% endif %}
+                    </a>
+                </section>
+            {% endif %}
+
             <section class="form-card">
                 <h2 class="card-title">Sobre a tarefa</h2>
                 <p class="prewrap">{{ task.description }}</p>
@@ -235,6 +262,17 @@
                     <p class="action-note">Para se candidatar, ative o papel de prestador no seu <a href="{{ url_for('profile.edit_profile') }}">perfil</a>.</p>
                 {% else %}
                     <p class="action-note">Esta tarefa não está mais recebendo candidaturas.</p>
+                {% endif %}
+
+                {# Salvar para depois: prestadores, em tarefas abertas de outras pessoas. #}
+                {% if current_user.is_authenticated and current_user.is_provider and not is_owner and task.status == "aberta" %}
+                    {% set is_saved = task.id in saved_task_ids %}
+                    <form method="POST" action="{{ url_for('tasks.toggle_saved', task_id=task.id) }}" class="save-inline">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <button type="submit" class="btn btn-ghost btn-sm btn-block" aria-pressed="{{ 'true' if is_saved else 'false' }}">
+                            {{ '♥ Salva — remover dos salvos' if is_saved else '♡ Salvar para decidir depois' }}
+                        </button>
+                    </form>
                 {% endif %}
             </section>
 

@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+{% from "_macros.html" import avatar %}
+
+{% block title %}Conversa: {{ task.title }} — Ajuda-Lá{% endblock %}
+
+{% block content %}
+<div class="container page-top">
+    <div class="chat-page">
+        <a href="{{ url_for('tasks.detail', task_id=task.id) }}" class="back-link">← Voltar para a tarefa</a>
+
+        <header class="chat-header">
+            {{ avatar(other) }}
+            <div>
+                <h1 class="chat-title">{{ other.name }}</h1>
+                <p class="muted">{{ task.title }} · <span class="task-status task-status-{{ task.status }}">{{ task.status_label }}</span></p>
+            </div>
+        </header>
+
+        <div class="chat-box"
+             data-chat
+             data-api-url="{{ url_for('messages.list_messages', task_id=task.id) }}"
+             data-csrf="{{ csrf_token() }}">
+            <div class="chat-messages" id="chat-messages" role="log" aria-live="polite" aria-label="Mensagens">
+                {% for message in messages %}
+                    <div class="chat-bubble {{ 'chat-bubble-mine' if message.mine else 'chat-bubble-theirs' }}" data-id="{{ message.id }}">
+                        <p>{{ message.content }}</p>
+                        <span class="chat-time">{{ message.time }}</span>
+                    </div>
+                {% else %}
+                    <p class="chat-empty" id="chat-empty">
+                        Nenhuma mensagem ainda. Que tal combinar o endereço e o horário?
+                    </p>
+                {% endfor %}
+            </div>
+
+            {% if task.chat_is_open %}
+                <form class="chat-form" id="chat-form">
+                    <label for="chat-input" class="visually-hidden">Mensagem</label>
+                    <input type="text" id="chat-input" maxlength="1000" autocomplete="off"
+                           placeholder="Escreva uma mensagem..." required>
+                    <button type="submit" class="btn btn-primary btn-sm">Enviar</button>
+                </form>
+                <p class="chat-error" id="chat-error" role="alert"></p>
+            {% else %}
+                <p class="chat-closed">Esta conversa está encerrada porque a tarefa foi concluída.</p>
+            {% endif %}
+        </div>
+
+        <p class="form-hint-text chat-tip">Dica: combine pagamento e endereço só por aqui — nunca compartilhe senhas ou códigos de verificação.</p>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/chat.js', v=asset_version) }}"></script>
+{% endblock %}

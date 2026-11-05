@@ -14,5 +14,8 @@ from models.task import Task
 from models.application import Application
 from models.message import Message
 from models.review import Review
+from models.task_image import TaskImage
+from models.saved_task import SavedTask
+from models.alert import Alert
 
-__all__ = ["User", "Task", "Application", "Message", "Review"]
+__all__ = ["User", "Task", "Application", "Message", "Review", "TaskImage", "SavedTask", "Alert"]

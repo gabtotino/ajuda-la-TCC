@@ -6,7 +6,7 @@ from flask_login import current_user, login_required, login_user, logout_user
 
 from extensions import db
 from models import User
-from utils import validate_csrf_token
+from utils import safe_next_url, validate_csrf_token
 
 # Um Blueprint agrupa rotas relacionadas (aqui, tudo sobre autenticação) e
 # pode ser registrado no app com um prefixo de URL comum — ver app.py, onde
@@ -29,7 +29,11 @@ def register():
         name = request.form.get("name", "").strip()
         email = request.form.get("email", "").strip().lower()
         password = request.form.get("password", "")
-        role = request.form.get("role")
+        # Checkboxes independentes: a pessoa pode ser contratante, prestadora
+        # ou as duas coisas (o model já guarda os papéis em colunas separadas).
+        # Checkbox desmarcado não vem no formulário, por isso a comparação com "on".
+        is_contractor = request.form.get("is_contractor") == "on"
+        is_provider = request.form.get("is_provider") == "on"
 
         # Validação manual: simples e suficiente para o escopo do MVP,
         # sem precisar de uma biblioteca de formulários (Flask-WTF).
@@ -40,21 +44,27 @@ def register():
             errors.append("Informe um e-mail válido.")
         if len(password) < 6:
             errors.append("A senha precisa ter pelo menos 6 caracteres.")
-        if role not in ("contractor", "provider"):
-            errors.append("Escolha se você quer contratar ou prestar serviços.")
+        if not (is_contractor or is_provider):
+            errors.append("Escolha pelo menos uma opção: contratar ajuda, prestar serviços ou as duas.")
         if email and User.query.filter_by(email=email).first() is not None:
             errors.append("Já existe uma conta cadastrada com este e-mail.")
 
         if errors:
             for error in errors:
                 flash(error, "error")
-            return render_template("auth/register.html", name=name, email=email)
+            return render_template(
+                "auth/register.html",
+                name=name,
+                email=email,
+                is_contractor=is_contractor,
+                is_provider=is_provider,
+            )
 
         user = User(
             name=name,
             email=email,
-            is_contractor=(role == "contractor"),
-            is_provider=(role == "provider"),
+            is_contractor=is_contractor,
+            is_provider=is_provider,
         )
         user.set_password(password)
         db.session.add(user)
@@ -94,12 +104,8 @@ def login():
         login_user(user)
         flash(f"Bem-vindo(a) de volta, {user.name}!", "success")
         # Volta para a página que pediu login (ex.: candidatar-se), mas só
-        # aceita caminhos internos — "next" vindo de fora poderia mandar o
-        # usuário para um site malicioso (open redirect).
-        next_url = request.args.get("next", "")
-        if next_url.startswith("/") and not next_url.startswith("//"):
-            return redirect(next_url)
-        return redirect(url_for("home"))
+        # aceita caminhos internos (ver safe_next_url).
+        return redirect(safe_next_url(request.args.get("next")) or url_for("home"))
 
     return render_template("auth/login.html")
 

@@ -13,7 +13,7 @@ from extensions import db, login_manager, migrate
 ERROR_PAGES = {
     403: ("Acesso negado", "Você não tem permissão para acessar esta página ou executar esta ação."),
     404: ("Página não encontrada", "O link que você seguiu pode estar quebrado, ou a página não está mais disponível."),
-    413: ("Arquivo grande demais", "O envio ultrapassou o limite de 5 MB. Tente novamente com um arquivo menor."),
+    413: ("Envio grande demais", "O envio ultrapassou o limite permitido (até 5 MB por imagem, 16 MB no total). Tente com imagens menores."),
     500: ("Algo deu errado do nosso lado", "Tente novamente em alguns instantes."),
 }
 
@@ -90,6 +90,7 @@ def create_app(config_class=Config):
     from routes.tasks import tasks_bp
     from routes.applications import applications_bp
     from routes.reviews import reviews_bp
+    from routes.messages import messages_bp
     from routes.dashboard import dashboard_bp
     from routes.ai import ai_bp
 
@@ -98,6 +99,7 @@ def create_app(config_class=Config):
     app.register_blueprint(tasks_bp, url_prefix="/tarefas")
     app.register_blueprint(applications_bp, url_prefix="/candidaturas")
     app.register_blueprint(reviews_bp, url_prefix="/avaliacoes")
+    app.register_blueprint(messages_bp, url_prefix="/mensagens")
     app.register_blueprint(dashboard_bp, url_prefix="/painel")
     app.register_blueprint(ai_bp, url_prefix="/ai")
 
@@ -119,6 +121,33 @@ def create_app(config_class=Config):
             "providers": User.query.filter_by(is_provider=True).count(),
         }
         return render_template("index.html", featured_tasks=featured_tasks, stats=stats)
+
+    @app.context_processor
+    def inject_user_context():
+        """Dados que o header e os cards precisam em todas as páginas:
+        contadores do menu e as tarefas que o prestador salvou."""
+        from flask_login import current_user
+
+        from models import SavedTask
+        from services.notifications import navigation_badges
+
+        if not current_user.is_authenticated:
+            return {"nav_badges": {}, "saved_task_ids": set()}
+        saved_ids = set()
+        if current_user.is_provider:
+            saved_ids = {
+                row[0]
+                for row in db.session.query(SavedTask.task_id).filter_by(user_id=current_user.id)
+            }
+        return {"nav_badges": navigation_badges(current_user), "saved_task_ids": saved_ids}
+
+    @app.after_request
+    def security_headers(response):
+        # nosniff impede o navegador de "adivinhar" o tipo de um arquivo:
+        # uma imagem enviada nunca é interpretada como HTML/JS.
+        response.headers.setdefault("X-Content-Type-Options", "nosniff")
+        response.headers.setdefault("Referrer-Policy", "same-origin")
+        return response
 
     def render_error(code):
         title, message = ERROR_PAGES[code]
@@ -167,4 +196,7 @@ if __name__ == "__main__":
         with app.app_context():
             seed_database()
 
-    app.run(debug=os.environ.get("FLASK_DEBUG") == "1")
+    app.run(
+        debug=os.environ.get("FLASK_DEBUG") == "1",
+        port=int(os.environ.get("PORT", 5000)),  # PORT=5001 se a 5000 estiver ocupada
+    )

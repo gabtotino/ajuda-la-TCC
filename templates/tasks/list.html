@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% from "tasks/_card.html" import task_card %}
+{% from "tasks/_card.html" import task_card with context %}
 
 {% block title %}Tarefas abertas — Ajuda-Lá{% endblock %}
 
@@ -20,6 +20,11 @@
             <button type="submit" class="btn btn-primary">Buscar</button>
         </div>
 
+        {# Aberto por padrão; no celular o main.js recolhe quando não há
+           filtro ativo, para as tarefas aparecerem logo abaixo da busca. #}
+        {% set has_advanced = active_filters|length - (1 if filters.q else 0) > 0 %}
+        <details class="filter-details" open data-collapse-mobile="{{ 'false' if has_advanced else 'true' }}">
+        <summary class="filter-summary">Filtros e ordenação{% if has_advanced %} <span class="inline-badge">ativos</span>{% endif %}</summary>
         <div class="filter-grid">
             <div class="filter-field">
                 <label for="f-categoria">Categoria</label>
@@ -71,6 +76,7 @@
                 <a href="{{ url_for('tasks.list_tasks') }}" class="btn btn-ghost btn-sm">Limpar filtros</a>
             {% endif %}
         </div>
+        </details>
     </form>
 
     <p class="results-count" role="status">

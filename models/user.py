@@ -49,6 +49,13 @@ class User(UserMixin, db.Model):
 
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
 
+    # Última vez que o prestador viu as tarefas dos seus alertas: o que foi
+    # publicado depois disso conta como "novo" no menu e no painel.
+    alerts_seen_at = db.Column(db.DateTime, nullable=True)
+    alerts = db.relationship(
+        "Alert", back_populates="user", cascade="all, delete-orphan", lazy=True
+    )
+
     # --- Relacionamentos ---
     # Tarefas publicadas por este usuário como contratante. O outro lado
     # (accepted_provider) é declarado diretamente no model Task, porque

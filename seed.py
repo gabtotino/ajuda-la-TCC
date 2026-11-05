@@ -11,10 +11,13 @@ Atenção: ele APAGA e recria todas as tabelas antes de inserir os dados.
 Nunca rode em um banco que já tenha cadastros reais que você queira manter.
 """
 
+import os
 from datetime import date, datetime, timedelta
 
+from flask import current_app
+
 from extensions import db
-from models import Application, Review, Task, User
+from models import Alert, Application, Message, Review, SavedTask, Task, User
 
 
 TODAY = date.today()
@@ -65,6 +68,15 @@ def seed_database():
     # Recomeça do zero para evitar duplicar dados a cada execução.
     db.drop_all()
     db.create_all()
+
+    # Todas as tarefas foram apagadas, então as fotos enviadas antes viraram
+    # arquivos órfãos: limpa a pasta de uploads para não acumular lixo.
+    upload_folder = current_app.config.get("UPLOAD_FOLDER")
+    if upload_folder and os.path.isdir(upload_folder):
+        for name in os.listdir(upload_folder):
+            path = os.path.join(upload_folder, name)
+            if os.path.isfile(path):
+                os.remove(path)
 
     mariana = make_user(
         "Mariana Souza", "mariana@example.com", "São Paulo",
@@ -188,6 +200,36 @@ def seed_database():
 
     for user in (joao, rafael, carla):
         user.recalculate_rating()
+
+    # --- Conversas ---
+    # Guarda-roupa (em andamento): a última mensagem do João ainda não foi
+    # lida pela Carla, então aparece como contador no menu dela.
+    def msg(task, sender, content, minutes_ago, read=True):
+        sent_at = NOW - timedelta(minutes=minutes_ago)
+        return Message(task_id=task.id, sender_id=sender.id, content=content,
+                       created_at=sent_at, read_at=sent_at if read else None)
+
+    db.session.add_all([
+        msg(wardrobe, carla, "Oi João! Pode ser amanhã à tarde, umas 14h?", 300),
+        msg(wardrobe, joao, "Pode sim! Levo a parafusadeira. Qual o número do apartamento?", 290),
+        msg(wardrobe, carla, "Rua das Flores, 120, apto 34. Interfone pelo nome.", 280),
+        msg(wardrobe, joao, "Combinado, chego às 14h. Até amanhã!", 20, read=False),
+        msg(walk_done, mariana, "Rafael, a guia fica pendurada ao lado da porta.", 60 * 24 * 6),
+        msg(walk_done, rafael, "Perfeito! Passeios feitos, ele se comportou muito bem 🐶", 60 * 24 * 5),
+    ])
+
+    # --- Tarefas salvas e alertas (prestadores) ---
+    db.session.add_all([
+        SavedTask(user_id=rafael.id, task_id=painting.id),
+        SavedTask(user_id=rafael.id, task_id=moving.id),
+        SavedTask(user_id=joao.id, task_id=painting.id),
+        # Rafael quer passeios com pet em qualquer cidade: a tarefa da Carla
+        # em Osasco aparece como "nova" no painel e no menu dele.
+        Alert(user_id=rafael.id, category="Passeio com pet", created_at=NOW - timedelta(days=7)),
+        Alert(user_id=joao.id, category="Montagem de móveis", city="São Paulo",
+              created_at=NOW - timedelta(days=30)),
+        Alert(user_id=joao.id, city="Osasco", created_at=NOW - timedelta(days=30)),
+    ])
     db.session.commit()
 
     print("Seed concluído. Contas de demonstração (senha 'senha123' para todas):")

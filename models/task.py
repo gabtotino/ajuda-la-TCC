@@ -81,7 +81,8 @@ class Task(db.Model):
     value = db.Column(db.Numeric(10, 2), nullable=False)
 
     status = db.Column(db.String(20), nullable=False, default=STATUS_OPEN)
-    image_filename = db.Column(db.String(255), nullable=True)
+
+    MAX_IMAGES = 3
 
     contractor_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
     accepted_provider_id = db.Column(
@@ -126,6 +127,32 @@ class Task(db.Model):
         uselist=False,
         lazy=True,
     )
+    images = db.relationship(
+        "TaskImage",
+        back_populates="task",
+        cascade="all, delete-orphan",
+        order_by="TaskImage.position",
+        lazy=True,
+    )
+    saved_by = db.relationship(
+        "SavedTask", back_populates="task", cascade="all, delete-orphan", lazy=True
+    )
+
+    @property
+    def cover_image(self):
+        return self.images[0] if self.images else None
+
+    def is_chat_participant(self, user):
+        """Chat existe só depois do aceite, entre contratante e prestador escolhido."""
+        if not user or not user.is_authenticated or not self.accepted_provider_id:
+            return False
+        return user.id in (self.contractor_id, self.accepted_provider_id)
+
+    @property
+    def chat_is_open(self):
+        # Durante a execução dá para conversar; depois de concluída a
+        # conversa fica disponível só para leitura (histórico).
+        return self.status == self.STATUS_IN_PROGRESS
 
     @property
     def location_label(self):

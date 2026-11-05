@@ -27,17 +27,29 @@
                     <input type="password" id="password" name="password" minlength="6" required>
                 </div>
 
-                <div class="form-group">
-                    <label>Eu quero</label>
-                    <div class="form-check">
-                        <input type="radio" id="role_contractor" name="role" value="contractor" checked>
-                        <label for="role_contractor">Contratar ajuda para tarefas</label>
-                    </div>
-                    <div class="form-check">
-                        <input type="radio" id="role_provider" name="role" value="provider">
-                        <label for="role_provider">Prestar serviços</label>
-                    </div>
-                </div>
+                {# Checkboxes: dá para marcar uma opção ou as duas. No primeiro
+                   acesso (GET) "contratar" já vem marcado como sugestão. #}
+                {% set first_visit = is_contractor is not defined %}
+                <fieldset class="form-group role-options">
+                    <legend>Eu quero <span class="optional">(marque uma ou as duas)</span></legend>
+                    <label class="role-option" for="is_contractor">
+                        <input type="checkbox" id="is_contractor" name="is_contractor"
+                               {% if first_visit or is_contractor %}checked{% endif %}>
+                        <span>
+                            <strong>Contratar ajuda</strong>
+                            <span class="muted">Publicar tarefas e escolher quem vai fazer</span>
+                        </span>
+                    </label>
+                    <label class="role-option" for="is_provider">
+                        <input type="checkbox" id="is_provider" name="is_provider"
+                               {% if not first_visit and is_provider %}checked{% endif %}>
+                        <span>
+                            <strong>Prestar serviços</strong>
+                            <span class="muted">Encontrar tarefas e ganhar uma renda extra</span>
+                        </span>
+                    </label>
+                    <p class="form-hint-text">Você pode mudar isso depois no seu perfil.</p>
+                </fieldset>
 
                 <button type="submit" class="btn btn-primary btn-block">Criar conta</button>
             </form>

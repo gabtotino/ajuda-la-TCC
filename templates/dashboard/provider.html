@@ -4,57 +4,220 @@
 
 {% block content %}
 <div class="container page-top">
-    <div class="section-header section-header-left">
-        <span class="section-eyebrow">Seu painel</span>
-        <h2>Painel do prestador</h2>
+    <div class="dashboard-head">
+        <div class="section-header section-header-left">
+            <span class="section-eyebrow">Seu painel</span>
+            <h1 class="page-title">Olá, {{ current_user.name.split(' ')[0] }}!</h1>
+        </div>
+        <a href="{{ url_for('tasks.list_tasks') }}" class="btn btn-primary">Encontrar tarefas</a>
     </div>
 
     {% if show_contractor_tab %}
-        <div class="tabs">
+        <nav class="tabs" aria-label="Escolher painel">
             <a href="{{ url_for('dashboard.contractor') }}" class="tab-link">Contratante</a>
-            <a href="{{ url_for('dashboard.provider') }}" class="tab-link active">Prestador</a>
-        </div>
+            <a href="{{ url_for('dashboard.provider') }}" class="tab-link active" aria-current="page">Prestador</a>
+        </nav>
     {% endif %}
 
     <div class="stat-grid">
+        <div class="stat-card"><div class="stat-value">{{ stats.pendentes }}</div><div class="stat-label">Candidaturas aguardando</div></div>
+        <div class="stat-card"><div class="stat-value">{{ stats.em_andamento }}</div><div class="stat-label">Em andamento</div></div>
+        <div class="stat-card"><div class="stat-value">{{ stats.concluidas }}</div><div class="stat-label">Concluídas</div></div>
         <div class="stat-card">
-            <div class="stat-value">{{ stats.enviadas }}</div>
-            <div class="stat-label">Candidaturas enviadas</div>
-        </div>
-        <div class="stat-card">
-            <div class="stat-value">{{ stats.aceitas }}</div>
-            <div class="stat-label">Aceitas</div>
-        </div>
-        <div class="stat-card">
-            <div class="stat-value">{{ stats.concluidas }}</div>
-            <div class="stat-label">Concluídas</div>
-        </div>
-        <div class="stat-card">
-            <div class="stat-value">
-                {% if stats.avaliacao_media %}{{ "%.1f"|format(stats.avaliacao_media) }}{% else %}—{% endif %}
-            </div>
+            <div class="stat-value">{{ '%.1f'|format(stats.avaliacao_media) if stats.avaliacao_media else '—' }}</div>
             <div class="stat-label">Avaliação média</div>
         </div>
     </div>
 
-    <h3>Minhas candidaturas</h3>
-    {% if applications %}
-        {% for application in applications %}
+    {# ===================== PRÓXIMOS PASSOS ===================== #}
+    <section class="dashboard-section">
+        <h2 class="section-title">Próximos passos</h2>
+        {% set new_matches = alert_matches|selectattr('id', 'in', new_match_ids)|list %}
+        {% if active or new_matches or saved %}
+            <ol class="next-steps">
+                {% for task in active %}
+                    <li class="next-step">
+                        <span class="next-step-icon" aria-hidden="true">💬</span>
+                        <div class="next-step-body">
+                            <strong>Você foi escolhido(a) para "{{ task.title }}"</strong>
+                            <span class="muted">
+                                Combine endereço e horário com {{ task.contractor.name }}
+                                {% if unread.get(task.id) %}· <span class="text-accent">{{ unread[task.id] }} mensagem(ns) nova(s)</span>{% endif %}
+                            </span>
+                        </div>
+                        <a href="{{ url_for('messages.chat', task_id=task.id) }}" class="btn btn-primary btn-sm">
+                            Conversar{% if unread.get(task.id) %} <span class="inline-badge">{{ unread[task.id] }}</span>{% endif %}
+                        </a>
+                    </li>
+                {% endfor %}
+                {% if new_matches %}
+                    <li class="next-step">
+                        <span class="next-step-icon" aria-hidden="true">🔔</span>
+                        <div class="next-step-body">
+                            <strong>{{ new_matches|length }} tarefa{{ 's' if new_matches|length > 1 }} nova{{ 's' if new_matches|length > 1 }} nos seus alertas</strong>
+                            <span class="muted">Candidate-se cedo: os primeiros costumam ser escolhidos.</span>
+                        </div>
+                        <a href="#alertas" class="btn btn-primary btn-sm">Ver tarefas</a>
+                    </li>
+                {% endif %}
+                {% if saved %}
+                    <li class="next-step">
+                        <span class="next-step-icon" aria-hidden="true">♥</span>
+                        <div class="next-step-body">
+                            <strong>{{ saved|length }} tarefa{{ 's' if saved|length > 1 }} salva{{ 's' if saved|length > 1 }} esperando sua decisão</strong>
+                            <span class="muted">Revise e candidate-se antes que outra pessoa seja escolhida.</span>
+                        </div>
+                        <a href="#salvas" class="btn btn-outline-primary btn-sm">Revisar</a>
+                    </li>
+                {% endif %}
+            </ol>
+        {% else %}
+            <div class="empty-state">
+                <p class="empty-state-title">Nada pendente agora</p>
+                <p>Crie um alerta abaixo ou <a href="{{ url_for('tasks.list_tasks') }}">explore as tarefas abertas</a>.</p>
+            </div>
+        {% endif %}
+    </section>
+
+    {# ===================== ALERTAS ===================== #}
+    <section class="dashboard-section" id="alertas">
+        <h2 class="section-title">Alertas de tarefas</h2>
+        <p class="muted">Avisamos aqui e no menu quando surgir uma tarefa aberta da categoria ou cidade que você escolher.</p>
+
+        <div class="alert-panel">
+            <form method="POST" action="{{ url_for('dashboard.create_alert') }}" class="alert-form">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <div class="filter-field">
+                    <label for="alert-category">Categoria</label>
+                    <select id="alert-category" name="category">
+                        <option value="">Qualquer categoria</option>
+                        {% for cat in categories %}<option value="{{ cat }}">{{ cat }}</option>{% endfor %}
+                    </select>
+                </div>
+                <div class="filter-field">
+                    <label for="alert-city">Cidade</label>
+                    <input type="text" id="alert-city" name="city" maxlength="80" placeholder="Ex.: São Paulo"
+                           value="{{ current_user.city or '' }}">
+                </div>
+                <button type="submit" class="btn btn-primary btn-sm" {% if alerts|length >= max_alerts %}disabled{% endif %}>Criar alerta</button>
+            </form>
+
+            {% if alerts %}
+                <ul class="alert-chips">
+                    {% for alert in alerts %}
+                        <li class="alert-chip">
+                            🔔 {{ alert.label }}
+                            <form method="POST" action="{{ url_for('dashboard.delete_alert', alert_id=alert.id) }}">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                <button type="submit" class="chip-remove" aria-label="Remover alerta {{ alert.label }}">×</button>
+                            </form>
+                        </li>
+                    {% endfor %}
+                </ul>
+            {% endif %}
+        </div>
+
+        {% if alerts %}
+            {% for task in alert_matches %}
+                <div class="list-card">
+                    <div>
+                        <div class="list-card-title">
+                            {{ task.title }}
+                            {% if task.id in new_match_ids %}<span class="tag tag-new">Nova</span>{% endif %}
+                            {% if task.is_urgent %}<span class="tag tag-urgent">Urgente</span>{% endif %}
+                        </div>
+                        <div class="list-card-meta">{{ task.category }} · {{ task.location_label }} · R$ {{ task.value|brl }} · {{ task.created_at|time_ago }}</div>
+                    </div>
+                    <a href="{{ url_for('tasks.detail', task_id=task.id) }}" class="btn btn-outline-primary btn-sm">Ver tarefa</a>
+                </div>
+            {% else %}
+                <div class="empty-state"><p>Nenhuma tarefa aberta combina com seus alertas agora. Avisaremos quando surgir.</p></div>
+            {% endfor %}
+        {% endif %}
+    </section>
+
+    {# ===================== SALVAS ===================== #}
+    <section class="dashboard-section" id="salvas">
+        <h2 class="section-title">Tarefas salvas</h2>
+        {% for item in saved %}
+            {% set task = item.task %}
+            <div class="list-card {{ 'list-card-muted' if task.status != 'aberta' }}">
+                <div>
+                    <div class="list-card-title">{{ task.title }}</div>
+                    <div class="list-card-meta">
+                        {% if task.status == 'aberta' %}
+                            {{ task.location_label }} · R$ {{ task.value|brl }}{% if task.desired_date %} · {{ task.desired_date|date_br }}{% endif %}
+                        {% else %}
+                            Esta tarefa não está mais aberta.
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="list-card-actions">
+                    {% if task.status == 'aberta' %}
+                        <a href="{{ url_for('tasks.detail', task_id=task.id) }}" class="btn btn-primary btn-sm">Ver e candidatar</a>
+                    {% endif %}
+                    <form method="POST" action="{{ url_for('tasks.toggle_saved', task_id=task.id) }}">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <input type="hidden" name="next" value="{{ url_for('dashboard.provider') }}#salvas">
+                        <button type="submit" class="btn btn-ghost btn-sm">Remover</button>
+                    </form>
+                </div>
+            </div>
+        {% else %}
+            <div class="empty-state">
+                <p>Toque no ♡ de uma tarefa para guardá-la aqui e decidir depois.</p>
+            </div>
+        {% endfor %}
+    </section>
+
+    {# ===================== CANDIDATURAS ===================== #}
+    <section class="dashboard-section">
+        <h2 class="section-title">Candidaturas aguardando resposta</h2>
+        {% for application in pending %}
             <div class="list-card">
                 <div>
                     <div class="list-card-title">{{ application.task.title }}</div>
-                    <div class="list-card-meta">{{ application.task.category }} · R$ {{ application.task.value|brl }}</div>
+                    <div class="list-card-meta">
+                        enviada {{ application.created_at|time_ago }}
+                        · {% if application.proposed_value %}você propôs R$ {{ application.proposed_value|brl }}{% else %}valor anunciado R$ {{ application.task.value|brl }}{% endif %}
+                    </div>
                 </div>
-                <div class="list-card-actions">
-                    <span class="task-status task-status-{{ application.status }}">{{ application.status }}</span>
-                    <a href="{{ url_for('tasks.detail', task_id=application.task_id) }}" class="btn btn-outline-primary btn-sm">Ver tarefa</a>
-                </div>
+                <a href="{{ url_for('tasks.detail', task_id=application.task_id) }}" class="btn btn-outline-primary btn-sm">Ver tarefa</a>
             </div>
+        {% else %}
+            <div class="empty-state"><p>Nenhuma candidatura aguardando resposta.</p></div>
         {% endfor %}
-    {% else %}
-        <div class="empty-state">
-            <p>Você ainda não se candidatou a nenhuma tarefa. <a href="{{ url_for('tasks.list_tasks') }}">Ver tarefas disponíveis</a>.</p>
-        </div>
+    </section>
+
+    {# ===================== HISTÓRICO ===================== #}
+    {% if done or rejected %}
+        <section class="dashboard-section">
+            <h2 class="section-title">Histórico</h2>
+            {% for task in done %}
+                <div class="list-card list-card-muted">
+                    <div>
+                        <div class="list-card-title">{{ task.title }}</div>
+                        <div class="list-card-meta">
+                            para {{ task.contractor.name }} · R$ {{ task.value|brl }}
+                            {% if task.review %}· nota recebida: {{ '★' * task.review.rating }}{% else %}· aguardando avaliação{% endif %}
+                        </div>
+                    </div>
+                    <div class="list-card-actions">
+                        <span class="task-status task-status-concluida">Concluída</span>
+                        <a href="{{ url_for('messages.chat', task_id=task.id) }}" class="btn btn-ghost btn-sm">Conversa</a>
+                    </div>
+                </div>
+            {% endfor %}
+            {% for application in rejected %}
+                <div class="list-card list-card-muted">
+                    <div>
+                        <div class="list-card-title">{{ application.task.title }}</div>
+                        <div class="list-card-meta">Outro prestador foi escolhido desta vez.</div>
+                    </div>
+                    <span class="task-status task-status-recusada">recusada</span>
+                </div>
+            {% endfor %}
+        </section>
     {% endif %}
 </div>
 {% endblock %}

@@ -39,11 +39,13 @@ class Config:
     # consome memória extra e que este projeto não usa.
     SQLALCHEMY_TRACK_MODIFICATIONS = False
 
-    # Pasta onde as imagens de tarefas/avatares serão salvas (a partir da Etapa 6).
-    UPLOAD_FOLDER = os.path.join(BASE_DIR, "static", "uploads")
+    # Pasta onde as imagens das tarefas são salvas (servidas como estáticos).
+    UPLOAD_FOLDER = os.path.join(BASE_DIR, "static", "uploads", "tasks")
 
-    # Limite de tamanho de upload: 5 MB, conforme especificação do projeto.
-    MAX_CONTENT_LENGTH = 5 * 1024 * 1024
+    # Cada imagem pode ter até 5 MB; o request inteiro (até 3 imagens + o
+    # formulário) é limitado a 16 MB — acima disso o Flask responde 413.
+    MAX_IMAGE_SIZE = 5 * 1024 * 1024
+    MAX_CONTENT_LENGTH = 16 * 1024 * 1024
 
     # Chave da API da OpenAI, usada a partir da Etapa 11.
     OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY")
@@ -59,3 +61,4 @@ class TestConfig(Config):
     SECRET_KEY = "chave-de-teste"
     SQLALCHEMY_DATABASE_URI = "sqlite://"  # banco em memória, isolado por teste
     OPENAI_API_KEY = None
+    UPLOAD_FOLDER = None  # cada teste recebe uma pasta temporária (conftest.py)

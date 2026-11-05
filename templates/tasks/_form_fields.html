@@ -73,6 +73,36 @@
 </fieldset>
 
 <fieldset class="form-section">
+    <legend>Fotos <span class="optional">(opcional, até 3)</span></legend>
+    <p class="form-hint-text">Uma foto do quintal, do móvel ou do carro ajuda o prestador a entender o tamanho do serviço. JPG, PNG ou WEBP, até 5 MB cada.</p>
+
+    {% set existing_images = task.images if task is defined and task else [] %}
+    {% if existing_images %}
+        <div class="image-manager">
+            {% for image in existing_images %}
+                <label class="image-thumb">
+                    <img src="{{ url_for('static', filename='uploads/tasks/' ~ image.filename) }}" alt="Foto {{ loop.index }} da tarefa">
+                    <span class="image-thumb-remove">
+                        <input type="checkbox" name="remove_image" value="{{ image.id }}"> Remover
+                    </span>
+                </label>
+            {% endfor %}
+        </div>
+    {% endif %}
+
+    <div class="form-group">
+        <label for="images" class="file-drop">
+            <span class="file-drop-icon" aria-hidden="true">📷</span>
+            <span><strong>Escolher fotos</strong><br><span class="muted">ou arraste para cá</span></span>
+        </label>
+        <input type="file" id="images" name="images" multiple class="file-input"
+               accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp"
+               data-image-input data-max-files="{{ 3 - existing_images|length }}" data-preview="image-preview">
+        <div class="image-preview" id="image-preview" aria-live="polite"></div>
+    </div>
+</fieldset>
+
+<fieldset class="form-section">
     <legend>Quanto?</legend>
     <div class="form-group form-group-narrow">
         <label for="value">Valor oferecido (R$)</label>

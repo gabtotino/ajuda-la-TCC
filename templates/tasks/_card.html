@@ -1,10 +1,24 @@
-{# Macro reutilizada na home, na listagem e nos painéis — um único lugar
-   define a aparência do card. Hierarquia: categoria/urgência > título >
-   resumo > onde/quando > valor. #}
+{# Macro reutilizada na home e na listagem — um único lugar define a
+   aparência do card. Hierarquia: imagem/categoria > título > resumo >
+   onde/quando > valor.
+   Importe com "with context" para o macro enxergar current_user e
+   saved_task_ids (injetados por context processors). #}
 {% macro task_card(task) %}
-<article class="task-card">
+<article class="task-card {{ 'task-card-has-image' if task.cover_image }}">
+    {% if task.cover_image %}
+        <div class="task-card-cover">
+            <img src="{{ url_for('static', filename='uploads/tasks/' ~ task.cover_image.filename) }}"
+                 alt="" loading="lazy">
+            {% if task.images|length > 1 %}
+                <span class="cover-count">📷 {{ task.images|length }}</span>
+            {% endif %}
+        </div>
+    {% endif %}
+
     <div class="task-card-top">
-        <span class="task-icon-tile" aria-hidden="true">{{ task.category|category_icon }}</span>
+        {% if not task.cover_image %}
+            <span class="task-icon-tile" aria-hidden="true">{{ task.category|category_icon }}</span>
+        {% endif %}
         <div class="task-card-tags">
             {% if task.is_urgent %}
                 <span class="tag tag-urgent">Urgente</span>
@@ -30,11 +44,27 @@
                 {% if task.is_flexible %}<span class="muted">(flexível)</span>{% endif %}
             </li>
         {% endif %}
+        <li class="task-posted"><span aria-hidden="true">🕒</span> publicada {{ task.created_at|time_ago }}</li>
     </ul>
 
     <div class="task-footer">
-        <span class="task-price"><small>Valor oferecido</small>R$ {{ task.value|brl }}</span>
-        <span class="task-posted">{{ task.created_at|time_ago }}</span>
+        <span class="task-price"><small>Valor</small>R$ {{ task.value|brl }}</span>
+        <div class="task-footer-right">
+            {% if current_user.is_authenticated and current_user.is_provider and task.contractor_id != current_user.id and task.status == "aberta" %}
+                {% set is_saved = task.id in saved_task_ids %}
+                {# Fica acima do link "esticado" do card (z-index) para ser clicável. #}
+                <form method="POST" action="{{ url_for('tasks.toggle_saved', task_id=task.id) }}" class="save-form">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <input type="hidden" name="next" value="{{ request.full_path if request.query_string else request.path }}">
+                    <button type="submit" class="save-button {{ 'is-saved' if is_saved }}"
+                            aria-pressed="{{ 'true' if is_saved else 'false' }}"
+                            aria-label="{{ 'Remover dos salvos' if is_saved else 'Salvar tarefa' }}: {{ task.title }}"
+                            title="{{ 'Remover dos salvos' if is_saved else 'Salvar para depois' }}">
+                        {{ '♥' if is_saved else '♡' }}
+                    </button>
+                </form>
+            {% endif %}
+        </div>
     </div>
 </article>
 {% endmacro %}

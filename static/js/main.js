@@ -47,4 +47,54 @@ document.addEventListener("DOMContentLoaded", function () {
         field.addEventListener("input", update);
         update();
     });
+
+    // --- Filtros recolhíveis no celular ---
+    if (window.matchMedia("(max-width: 760px)").matches) {
+        document.querySelectorAll("details[data-collapse-mobile='true']").forEach(function (details) {
+            details.open = false;
+        });
+    }
+
+    // --- Pré-visualização de imagens antes do envio ---
+    // Só melhora a experiência (o servidor valida tudo de novo): mostra as
+    // miniaturas escolhidas e avisa se passar do limite de fotos ou de 5 MB.
+    document.querySelectorAll("input[data-image-input]").forEach(function (input) {
+        const preview = document.getElementById(input.dataset.preview);
+        const maxFiles = parseInt(input.dataset.maxFiles, 10);
+        const maxBytes = 5 * 1024 * 1024;
+
+        input.addEventListener("change", function () {
+            preview.innerHTML = "";
+            const files = Array.from(input.files);
+            const problems = [];
+
+            if (files.length > maxFiles) {
+                problems.push(maxFiles > 0
+                    ? "Você pode adicionar no máximo " + maxFiles + " foto(s)."
+                    : "Esta tarefa já tem 3 fotos. Remova alguma para adicionar outra.");
+            }
+            files.forEach(function (file) {
+                if (file.size > maxBytes) {
+                    problems.push('"' + file.name + '" tem mais de 5 MB.');
+                }
+            });
+
+            if (problems.length) {
+                const warning = document.createElement("p");
+                warning.className = "image-preview-error";
+                warning.textContent = problems.join(" ");
+                preview.appendChild(warning);
+                input.value = "";
+                return;
+            }
+
+            files.forEach(function (file) {
+                const img = document.createElement("img");
+                img.src = URL.createObjectURL(file);
+                img.alt = "Pré-visualização de " + file.name;
+                img.onload = function () { URL.revokeObjectURL(img.src); };
+                preview.appendChild(img);
+            });
+        });
+    });
 });

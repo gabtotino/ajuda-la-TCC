@@ -16,7 +16,7 @@ def test_cadastro_cria_usuario_com_senha_em_hash(client, app):
             "name": "Ana",
             "email": "Ana@Example.com",
             "password": "segredo1",
-            "role": "provider",
+            "is_provider": "on",
             "csrf_token": CSRF_TOKEN,
         },
     )
@@ -27,6 +27,32 @@ def test_cadastro_cria_usuario_com_senha_em_hash(client, app):
     assert user.check_password("segredo1")
 
 
+def test_cadastro_com_os_dois_papeis(client):
+    client.post(
+        "/auth/cadastro",
+        data={
+            "name": "Bia",
+            "email": "bia@example.com",
+            "password": "segredo1",
+            "is_contractor": "on",
+            "is_provider": "on",
+            "csrf_token": CSRF_TOKEN,
+        },
+    )
+    user = User.query.filter_by(email="bia@example.com").one()
+    assert user.is_contractor and user.is_provider
+
+
+def test_cadastro_exige_pelo_menos_um_papel(client):
+    response = client.post(
+        "/auth/cadastro",
+        data={"name": "Caio", "email": "caio@example.com", "password": "segredo1", "csrf_token": CSRF_TOKEN},
+    )
+    assert response.status_code == 200
+    assert "Escolha pelo menos uma opção" in response.get_data(as_text=True)
+    assert User.query.count() == 0
+
+
 def test_cadastro_recusa_email_duplicado(client, make_user):
     existing = make_user()
     response = client.post(
@@ -35,7 +61,7 @@ def test_cadastro_recusa_email_duplicado(client, make_user):
             "name": "Outra pessoa",
             "email": existing.email,
             "password": "segredo1",
-            "role": "contractor",
+            "is_contractor": "on",
             "csrf_token": CSRF_TOKEN,
         },
     )
@@ -47,7 +73,7 @@ def test_cadastro_recusa_email_duplicado(client, make_user):
 def test_cadastro_sem_csrf_e_rejeitado(client):
     client.post(
         "/auth/cadastro",
-        data={"name": "Ana", "email": "ana@example.com", "password": "segredo1", "role": "provider"},
+        data={"name": "Ana", "email": "ana@example.com", "password": "segredo1", "is_provider": "on"},
     )
     assert User.query.count() == 0
 

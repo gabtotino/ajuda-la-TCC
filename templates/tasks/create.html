@@ -19,7 +19,7 @@
                 <p class="ai-status" id="ai-assist-status" role="status"></p>
             </div>
 
-            <form method="POST" action="{{ url_for('tasks.create') }}">
+            <form method="POST" action="{{ url_for('tasks.create') }}" enctype="multipart/form-data">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 {% include "tasks/_form_fields.html" %}
                 <button type="submit" class="btn btn-primary btn-block">Publicar tarefa</button>

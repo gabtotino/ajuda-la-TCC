@@ -44,10 +44,26 @@ dados, autenticação e um assistente de IA.
 - **Avaliações:** ao concluir, o contratante avalia o prestador (1 a 5
   estrelas + comentário opcional), uma única vez por tarefa. A média do
   prestador é recalculada na hora.
-- **Dashboard:** painel do contratante (tarefas por status, candidatos
-  pendentes, avaliações pendentes como próximo passo) e painel do prestador
-  (candidaturas enviadas, aceitas, concluídas), com abas quando o usuário
-  tem os dois papéis.
+- **Chat interno:** depois do aceite, contratante e prestador escolhido
+  conversam numa tela própria da tarefa (atualização a cada 5 s por
+  polling, sem WebSocket). Só os dois têm acesso; após a conclusão a
+  conversa fica somente leitura. Mensagens não lidas aparecem como
+  contador no menu.
+- **Fotos das tarefas:** até 3 imagens por tarefa (JPG, PNG ou WEBP, 5 MB
+  cada), com validação no servidor de extensão, MIME type, conteúdo real do
+  arquivo ("magic bytes") e tamanho, além de nome aleatório gerado pelo
+  servidor. As fotos aparecem como capa no card e em galeria no detalhe, e
+  são apagadas do disco junto com a tarefa.
+- **Salvar tarefa e alertas:** prestadores salvam tarefas (♡) para decidir
+  depois e criam até 5 alertas internos por categoria e/ou cidade. Tarefas
+  novas que batem com os alertas aparecem no painel e no menu — sem
+  e-mail, push ou WhatsApp.
+- **Painéis com próximos passos:** o contratante vê o que fazer agora
+  (escolher candidatos, conversar com quem foi escolhido, concluir,
+  avaliar), as tarefas abertas e o histórico; o prestador vê tarefas em que
+  foi escolhido, novidades dos alertas, tarefas salvas, candidaturas
+  aguardando resposta e histórico com as notas recebidas. Abas quando o
+  usuário tem os dois papéis.
 - **Assistente de IA:** no formulário de criação de tarefa, o contratante
   pode descrever o pedido em linguagem natural (ex.: *"preciso lavar meu
   carro sábado, pago 50 reais"*) e a IA preenche título, descrição,
@@ -60,22 +76,17 @@ dados, autenticação e um assistente de IA.
   debug só com `FLASK_DEBUG=1`, autorização validada no servidor em todas
   as ações, páginas de erro consistentes (403, 404, 413, 500) e exclusão em
   cascata (sem candidaturas, mensagens, avaliações ou imagens órfãs).
-- **Testes automatizados** (pytest): autenticação, permissões, candidatura,
-  aceite, conclusão e avaliações.
+- **Testes automatizados** (pytest, 53 testes): autenticação, permissões,
+  candidatura, aceite, conclusão, avaliações, chat, upload, tarefas salvas,
+  alertas e painéis.
 
 ### Fora do escopo desta entrega (roadmap futuro)
 
-Para focar no fluxo principal (publicar → candidatar → escolher → concluir
-→ avaliar), as seguintes funcionalidades ficam como próximos passos:
-
-- **Próxima iteração (P1):** chat interno entre contratante e prestador
-  escolhido (o model `Message` já existe e é apagado em cascata com a
-  tarefa); upload seguro de até 3 imagens por tarefa (a coluna
-  `image_filename` já existe); "salvar tarefa" e alertas internos por
-  categoria/cidade para prestadores; painéis com histórico mais completo.
-- **Fora do MVP (P2):** pagamentos, mapas e geolocalização em tempo real,
-  verificação de documentos, notificações por e-mail/push/WhatsApp,
-  recomendação avançada e painel administrativo.
+O fluxo completo (publicar → encontrar → candidatar-se → escolher →
+conversar → concluir → avaliar) está implementado. Ficam fora do MVP, de
+forma consciente: pagamentos, mapas e geolocalização em tempo real,
+verificação de documentos, notificações por e-mail/push/WhatsApp,
+recomendação avançada e painel administrativo.
 
 ## Identidade visual
 
@@ -118,11 +129,11 @@ Etapas concluídas nesta entrega:
 10. Refinamento do MVP: avaliações, candidaturas comparáveis, agenda e
     localização estruturada, filtros/ordenação/paginação, menu mobile,
     reforço de segurança e testes automatizados
+11. Engajamento: chat interno, fotos nas tarefas, tarefas salvas, alertas
+    internos e painéis com próximos passos
 
-As etapas de **upload de imagens** e **mensagens** foram deliberadamente
-escopadas para uma próxima iteração — o model `Message` e a coluna
-`image_filename` já estão modelados no banco, prontos para receber a
-implementação (ver seção *Fora do escopo desta entrega*).
+Os itens que continuam fora do MVP estão listados na seção *Fora do
+escopo desta entrega*.
 
 ### Condução do projeto
 
@@ -214,7 +225,8 @@ flask db upgrade
 Isso cria `ajudala.db` na raiz do projeto com todas as tabelas — ou, num
 banco já existente, aplica as migrations novas preservando os dados (a
 migration de localização converte o antigo campo "Bairro, Cidade" em
-cidade e bairro separados).
+cidade e bairro separados, e a de imagens move a antiga coluna
+`image_filename` para a nova tabela `task_images`).
 
 ### 5. Dados de demonstração (opcional, recomendado)
 
@@ -227,12 +239,14 @@ Cria 4 contas de demonstração, todas com senha `senha123`:
 | E-mail | Papel |
 |---|---|
 | `mariana@example.com` | Contratante (tarefa com 3 candidatos para comparar e 1 avaliação pendente) |
-| `joao@example.com` | Prestador com histórico (2 avaliações, média 4,5) |
-| `rafael@example.com` | Prestador novo |
-| `carla@example.com` | Contratante **e** prestadora |
+| `joao@example.com` | Prestador com histórico (2 avaliações, média 4,5), escolhido para uma tarefa em andamento, com alertas |
+| `rafael@example.com` | Prestador novo, com tarefas salvas e alerta de "Passeio com pet" |
+| `carla@example.com` | Contratante **e** prestadora, com mensagem não lida no chat |
 
-E popula 9 tarefas em todos os status (abertas, em andamento, concluídas)
-para que o fluxo completo já apareça pronto ao navegar pelo site.
+E popula 9 tarefas em todos os status (abertas, em andamento, concluídas),
+conversas, tarefas salvas e alertas, para que o fluxo completo já apareça
+pronto ao navegar pelo site. O seed também limpa a pasta de fotos
+(`static/uploads/tasks/`), já que todas as tarefas são recriadas.
 
 > **Atenção:** `seed.py` apaga e recria todas as tabelas. Não rode em um
 > banco com cadastros reais que você queira manter.
@@ -243,7 +257,8 @@ para que o fluxo completo já apareça pronto ao navegar pelo site.
 python app.py
 ```
 
-Acesse `http://localhost:5000`.
+Acesse `http://localhost:5000`. Se a porta estiver ocupada, use outra com
+`PORT=5001` no `.env`.
 
 > **Modo demonstração:** com `RESET_DB_ON_START=1` no `.env`, cada
 > `python app.py` apaga o banco e recria os dados de demonstração —
@@ -278,16 +293,19 @@ ajuda-la/
 ├── extensions.py             # db, migrate, login_manager
 ├── utils.py                  # CSRF manual, moeda, datas, tempo relativo, ícones
 ├── seed.py                   # Dados de demonstração
-├── models/                   # User, Task, Application, Message, Review
-├── routes/                   # Blueprints: auth, profile, tasks, applications, reviews, dashboard, ai
+├── models/                   # User, Task, Application, Message, Review, TaskImage, SavedTask, Alert
+├── routes/                   # Blueprints: auth, profile, tasks, applications, reviews, messages, dashboard, ai
 ├── tests/                    # Testes automatizados (pytest)
 ├── services/
-│   └── ai_service.py         # Integração com a OpenAI API
+│   ├── ai_service.py         # Integração com a OpenAI API
+│   ├── upload_service.py     # Validação e gravação segura das fotos
+│   └── notifications.py      # Mensagens não lidas e alertas (contadores internos)
 ├── templates/                # Jinja2, organizados por blueprint
 ├── static/
 │   ├── css/style.css         # Design system (paleta, componentes)
-│   ├── js/                   # ai-assistant.js, main.js
-│   └── img/logo.png
+│   ├── js/                   # main.js, chat.js, ai-assistant.js
+│   ├── img/logo.png
+│   └── uploads/tasks/        # Fotos enviadas (fora do Git)
 └── migrations/                # Histórico de migrations (Flask-Migrate)
 ```
 

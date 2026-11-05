@@ -2,17 +2,59 @@
 """CRUD de tarefas: listagem pública com filtros, detalhe, criação, edição,
 cancelamento e exclusão."""
 
-import os
 from datetime import date
 
 from flask import Blueprint, abort, current_app, flash, redirect, render_template, request, url_for
 from flask_login import current_user, login_required
 
 from extensions import db
-from models import Application, Task
-from utils import parse_date, parse_money, validate_csrf_token
+from models import Application, SavedTask, Task, TaskImage
+from services.upload_service import (
+    UploadError,
+    delete_image_file,
+    save_image,
+    selected_files,
+    validate_image,
+)
+from services.notifications import unread_counts_by_task
+from utils import parse_date, parse_money, safe_next_url, validate_csrf_token
 
 tasks_bp = Blueprint("tasks", __name__)
+
+
+def _validate_uploads(files, slots_available):
+    """Valida as imagens enviadas sem gravar nada ainda.
+
+    Retorna ([(arquivo, extensão), ...], erros). Só depois que TUDO no
+    formulário estiver válido os arquivos vão para o disco — assim um erro
+    no título não deixa imagens soltas na pasta de uploads.
+    """
+    errors = []
+    if len(files) > slots_available:
+        errors.append(
+            f"Cada tarefa pode ter no máximo {Task.MAX_IMAGES} imagens "
+            f"(você pode adicionar mais {slots_available})."
+        )
+        return [], errors
+
+    accepted = []
+    for file_storage in files:
+        try:
+            accepted.append((file_storage, validate_image(file_storage)))
+        except UploadError as exc:
+            errors.append(str(exc))
+    return accepted, errors
+
+
+def _attach_images(task, accepted):
+    """Grava os arquivos e cria as linhas TaskImage (antes do commit)."""
+    saved = []
+    next_position = max((image.position for image in task.images), default=-1) + 1
+    for offset, (file_storage, extension) in enumerate(accepted):
+        filename = save_image(file_storage, extension)
+        saved.append(filename)
+        task.images.append(TaskImage(filename=filename, position=next_position + offset))
+    return saved
 
 SORT_OPTIONS = {
     "recentes": "Mais recentes",
@@ -187,6 +229,11 @@ def detail(task_id):
     )
     contractor_task_count = Task.query.filter_by(contractor_id=task.contractor_id).count()
 
+    is_chat_participant = task.is_chat_participant(current_user)
+    chat_unread = (
+        unread_counts_by_task(current_user).get(task.id, 0) if is_chat_participant else 0
+    )
+
     return render_template(
         "tasks/detail.html",
         task=task,
@@ -194,6 +241,8 @@ def detail(task_id):
         my_application=my_application,
         can_apply=can_apply,
         contractor_task_count=contractor_task_count,
+        is_chat_participant=is_chat_participant,
+        chat_unread=chat_unread,
     )
 
 
@@ -212,9 +261,15 @@ def create():
             return redirect(url_for("tasks.create"))
 
         raw, clean, errors = _read_task_form(request.form)
+        files = selected_files(request.files)
+        accepted, upload_errors = _validate_uploads(files, Task.MAX_IMAGES)
+        errors += upload_errors
         if errors:
             for error in errors:
                 flash(error, "error")
+            if files:
+                # O navegador não guarda arquivos entre envios por segurança.
+                flash("Selecione as imagens novamente antes de publicar.", "info")
             return render_template("tasks/create.html", form=raw, **context)
 
         task = Task(
@@ -232,7 +287,16 @@ def create():
             contractor_id=current_user.id,
         )
         db.session.add(task)
-        db.session.commit()
+        saved_files = _attach_images(task, accepted)
+        try:
+            db.session.commit()
+        except Exception:
+            # Se o banco falhar, os arquivos já gravados não podem ficar
+            # órfãos na pasta de uploads.
+            db.session.rollback()
+            for filename in saved_files:
+                delete_image_file(filename)
+            raise
 
         flash("Tarefa publicada! Agora é só aguardar as candidaturas.", "success")
         return redirect(url_for("tasks.detail", task_id=task.id))
@@ -257,6 +321,15 @@ def edit(task_id):
             return redirect(url_for("tasks.edit", task_id=task.id))
 
         raw, clean, errors = _read_task_form(request.form)
+
+        # Imagens marcadas para remoção: só ids que pertencem a ESTA tarefa
+        # contam (um id de outra tarefa, forjado no formulário, é ignorado).
+        remove_ids = set(request.form.getlist("remove_image", type=int))
+        to_remove = [image for image in task.images if image.id in remove_ids]
+        slots = Task.MAX_IMAGES - (len(task.images) - len(to_remove))
+        accepted, upload_errors = _validate_uploads(selected_files(request.files), slots)
+        errors += upload_errors
+
         if errors:
             for error in errors:
                 flash(error, "error")
@@ -267,7 +340,21 @@ def edit(task_id):
             "neighborhood", "desired_date", "time_period", "is_flexible", "value",
         ):
             setattr(task, field, clean[field])
-        db.session.commit()
+
+        removed_files = [image.filename for image in to_remove]
+        for image in to_remove:
+            task.images.remove(image)  # delete-orphan apaga a linha no commit
+        saved_files = _attach_images(task, accepted)
+        try:
+            db.session.commit()
+        except Exception:
+            db.session.rollback()
+            for filename in saved_files:
+                delete_image_file(filename)
+            raise
+
+        for filename in removed_files:
+            delete_image_file(filename)
 
         flash("Tarefa atualizada com sucesso.", "success")
         return redirect(url_for("tasks.detail", task_id=task.id))
@@ -321,17 +408,40 @@ def delete(task_id):
         flash("Tarefas em andamento ou concluídas não podem ser excluídas.", "error")
         return redirect(url_for("tasks.detail", task_id=task.id))
 
-    image_filename = task.image_filename
+    image_files = [image.filename for image in task.images]
 
-    # O cascade definido em Task remove candidaturas, mensagens e avaliação.
+    # O cascade definido em Task remove candidaturas, mensagens, avaliação,
+    # imagens e os registros de "tarefa salva" que apontam para ela.
     db.session.delete(task)
     db.session.commit()
 
-    # Imagem só é apagada depois do commit: se o banco falhasse, não
-    # queremos ter perdido o arquivo de uma tarefa que continua existindo.
-    if image_filename:
-        image_path = os.path.join(current_app.config["UPLOAD_FOLDER"], os.path.basename(image_filename))
-        if os.path.isfile(image_path):
-            os.remove(image_path)
+    # Arquivos só são apagados depois do commit: se o banco falhasse, não
+    # queremos ter perdido as imagens de uma tarefa que continua existindo.
+    for filename in image_files:
+        delete_image_file(filename)
     flash("Tarefa excluída.", "info")
     return redirect(url_for("dashboard.home"))
+
+
+@tasks_bp.route("/<int:task_id>/salvar", methods=["POST"])
+@login_required
+def toggle_saved(task_id):
+    """Salva (ou remove dos salvos) uma tarefa, para prestadores."""
+    task = db.get_or_404(Task, task_id)
+    if not validate_csrf_token(request.form.get("csrf_token")):
+        abort(400)
+    if not current_user.is_provider or task.contractor_id == current_user.id:
+        abort(403)
+
+    saved = SavedTask.query.filter_by(user_id=current_user.id, task_id=task.id).first()
+    if saved:
+        db.session.delete(saved)
+        flash("Tarefa removida dos salvos.", "info")
+    elif task.status != Task.STATUS_OPEN:
+        flash("Só é possível salvar tarefas abertas.", "error")
+    else:
+        db.session.add(SavedTask(user_id=current_user.id, task_id=task.id))
+        flash("Tarefa salva! Ela fica no seu painel para decidir depois.", "success")
+    db.session.commit()
+
+    return redirect(safe_next_url(request.form.get("next")) or url_for("tasks.detail", task_id=task.id))

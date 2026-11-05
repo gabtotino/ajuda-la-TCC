@@ -36,6 +36,17 @@ def validate_csrf_token(submitted_token):
     return secrets.compare_digest(submitted_token, expected)
 
 
+def safe_next_url(next_url):
+    """Devolve next_url só se for um caminho interno ("/tarefas/1").
+
+    URLs absolutas ou "//site.com" seriam um open redirect: um link
+    malicioso poderia mandar o usuário para outro site depois de uma ação.
+    """
+    if next_url and next_url.startswith("/") and not next_url.startswith("//"):
+        return next_url
+    return None
+
+
 def parse_money(raw_value):
     """Converte um valor digitado (aceita '1.234,56', '50,00' ou '50.00')
     em Decimal positivo. Retorna None se não for um valor válido."""
